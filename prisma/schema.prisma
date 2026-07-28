@@ -1,0 +1,59 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  email        String
+  emailHash    String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  entries         VaultEntry[]
+  trustedContacts TrustedContact[]
+}
+
+model VaultEntry {
+  id        String   @id @default(uuid())
+  userId    String
+  category  String
+  title     String
+  username  String?
+  email     String?
+  password  String
+  pin       String?
+  url       String?
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([category])
+}
+
+model TrustedContact {
+  id           String   @id @default(uuid())
+  userId       String
+  name         String
+  email        String
+  phone        String?
+  relation     String
+  accessCodeHash String @unique
+  isActivated  Boolean  @default(false)
+  activatedAt  DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}

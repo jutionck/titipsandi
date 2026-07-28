@@ -1,0 +1,38 @@
+name: Bug report
+description: Laporkan bug non-keamanan yang dapat direproduksi
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Jangan laporkan kerentanan atau menyertakan credential/data vault di sini. Ikuti SECURITY.md untuk laporan privat.
+  - type: textarea
+    id: description
+    attributes:
+      label: Deskripsi
+      description: Apa yang terjadi dan apa yang seharusnya terjadi?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Langkah reproduksi
+      description: Gunakan data dummy dan hapus seluruh secret dari output.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Commit atau versi
+    validations:
+      required: true
+  - type: dropdown
+    id: sensitive
+    attributes:
+      label: Konfirmasi privasi
+      options:
+        - Saya sudah memastikan laporan tidak memuat secret atau data pengguna
+    validations:
+      required: true

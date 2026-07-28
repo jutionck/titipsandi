@@ -1,0 +1,18 @@
+{
+  "name": "TitipSandi",
+  "short_name": "TitipSandi",
+  "description": "Simpan password & PIN dengan aman untuk keluarga tercinta",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f9fafb",
+  "theme_color": "#111827",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
