@@ -21,13 +21,15 @@ Perlindungan yang dituju:
 - Repo publik tidak memuat credential atau encryption key.
 - Ciphertext yang diubah atau dipindahkan antar-field gagal diautentikasi.
 - Kode akses darurat tidak dapat dipulihkan dari hash database.
+- Login passkey memverifikasi challenge, origin, RP ID, signature counter, dan
+  user verification. Data biometrik maupun PIN perangkat tidak diterima server.
 
 Di luar perlindungan saat ini:
 
 - Kompromi runtime Vercel atau `ENCRYPTION_KEY`.
 - JavaScript berbahaya yang disajikan dari origin aplikasi.
 - Perangkat pengguna, browser extension, clipboard, screenshot, dan phishing.
-- Pengambilalihan akun tanpa MFA.
+- Pengambilalihan akun yang hanya mengandalkan Master Password.
 - Traffic flooding dan brute force terdistribusi tanpa rate limiter eksternal.
 - Administrator aplikasi yang sengaja memodifikasi server.
 
@@ -35,6 +37,8 @@ Di luar perlindungan saat ini:
 
 - Simpan `DATABASE_URL`, `MIGRATION_DATABASE_URL`, `JWT_SECRET`, dan
   `ENCRYPTION_KEY` hanya di secret manager environment.
+- Tetapkan `WEBAUTHN_ORIGIN` dan `WEBAUTHN_RP_ID` ke domain canonical production.
+  Perubahan domain membuat passkey lama tidak dapat dipakai pada domain baru.
 - Gunakan nilai berbeda per environment.
 - Jangan mengirim secret melalui issue, log, screenshot, atau chat publik.
 - Backup terenkripsi harus diuji pemulihannya.

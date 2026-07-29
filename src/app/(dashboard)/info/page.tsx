@@ -3,6 +3,7 @@
 import Link from "next/link";
 import BottomNav from "@/components/BottomNav";
 import LogoutButton from "@/components/LogoutButton";
+import PasskeySettings from "@/components/PasskeySettings";
 import {
   Info,
   ShieldCheck,
@@ -125,6 +126,8 @@ export default function InfoPage() {
                 </div>
               </div>
             </div>
+
+            <PasskeySettings />
           </div>
 
           {/* Right Column: Support & Feedback */}

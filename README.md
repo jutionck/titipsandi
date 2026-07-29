@@ -22,6 +22,8 @@ bersifat open source dan dapat di-self-host.
 - Kode darurat menggunakan random 128-bit, hanya ditampilkan sekali, dan hanya
   hash SHA-256-nya yang disimpan.
 - Cookie sesi bersifat `HttpOnly`, `SameSite=Strict`, dan `Secure` di production.
+- Passkey memakai WebAuthn dengan verifikasi pengguna wajib. Biometrik dan PIN
+  perangkat tidak pernah dikirim ke server; database hanya menyimpan public key.
 - API dan halaman privat menggunakan `Cache-Control: no-store`; service worker
   tidak menyimpan halaman atau respons vault.
 - Supabase dipakai hanya sebagai PostgreSQL terkelola. Aplikasi tidak
@@ -29,7 +31,8 @@ bersifat open source dan dapat di-self-host.
 
 Metadata berikut masih terlihat oleh administrator database: ID internal,
 kategori vault, waktu pembuatan/perubahan, relasi antar-record, status aktivasi
-akses darurat, password hash login, blind index email, dan hash kode darurat.
+akses darurat, password hash login, blind index email, hash kode darurat, serta
+metadata dan public key passkey.
 Lihat [SECURITY.md](SECURITY.md) untuk threat model dan pelaporan kerentanan.
 
 ## Prasyarat
@@ -97,9 +100,13 @@ Tambahkan environment variables berikut untuk Production:
 - `MIGRATION_DATABASE_URL` (opsional jika memakai derivasi otomatis)
 - `JWT_SECRET`
 - `ENCRYPTION_KEY`
+- `WEBAUTHN_ORIGIN=https://titipsandi.com`
+- `WEBAUTHN_RP_ID=titipsandi.com`
 
 Jangan menyalin nilai production tersebut ke `.env.development.local`.
 Jika memakai Vercel Preview, gunakan project/database terpisah dari production.
+Jangan memasang nilai WebAuthn production pada Preview karena passkey terikat
+pada origin dan RP ID. Tanpa variabel tersebut, aplikasi memakai origin request.
 
 Jalankan migration secara terkontrol dengan `npm run db:deploy` sebelum
 mengalihkan traffic. Build Vercel otomatis menjalankan `prisma generate`.
@@ -111,6 +118,18 @@ database ke Git. `.gitignore` sudah menolak seluruh `.env*` kecuali
 Untuk mengarahkan tombol dukungan ke profil Saweria maintainer, isi
 `NEXT_PUBLIC_DEVELOPER_DONATION_URL`. Jika kosong, tombol tetap tampil dan
 mengarah ke halaman utama Saweria.
+
+## Login dengan passkey
+
+Setelah login memakai Master Password, buka halaman **Informasi** lalu pilih
+**Aktifkan Face ID / Sidik Jari / PIN**. Browser dan sistem operasi akan membuat
+passkey yang terikat pada domain aplikasi. Master Password harus dikonfirmasi
+saat menambahkan passkey baru. Login berikutnya cukup memasukkan email dan
+memilih **Masuk dengan Passkey**.
+
+Master Password tetap tersedia sebagai fallback. Hapus passkey yang tidak lagi
+digunakan dari halaman Informasi. WebAuthn memerlukan HTTPS, kecuali localhost
+yang diizinkan untuk development.
 
 ## Pengembangan
 
@@ -135,7 +154,7 @@ Kerentanan keamanan harus dilaporkan secara privat sesuai
 - Enkripsi berlangsung di server, bukan di browser.
 - Akses darurat adalah bearer capability: siapa pun yang memiliki kode dapat
   membuka vault terkait.
-- Belum tersedia MFA, recovery key, rotasi kunci otomatis, session revocation,
+- Belum tersedia recovery key, rotasi kunci otomatis, session revocation,
   rate limiter terdistribusi, audit log tahan-rusak, atau security audit
   independen.
 - Untuk deployment publik, aktifkan rate limiting/WAF pada endpoint `/api/auth/*`
