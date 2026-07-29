@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Shield, Lock, Mail, ArrowLeft, Eye, EyeOff } from "lucide-react";
+import { startAuthentication } from "@simplewebauthn/browser";
+import { Shield, Lock, Mail, ArrowLeft, Eye, EyeOff, Fingerprint } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -11,6 +12,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [passkeyLoading, setPasskeyLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -36,6 +38,51 @@ export default function LoginPage() {
       setError("Gagal terhubung ke server");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handlePasskeyLogin() {
+    setError("");
+    if (!email.trim()) {
+      setError("Masukkan email terlebih dahulu untuk memakai passkey.");
+      return;
+    }
+    if (!window.PublicKeyCredential || !window.isSecureContext) {
+      setError("Passkey memerlukan browser modern melalui HTTPS.");
+      return;
+    }
+
+    setPasskeyLoading(true);
+    try {
+      const optionsResponse = await fetch("/api/auth/passkeys/login/options", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const options = await optionsResponse.json();
+      if (!optionsResponse.ok) throw new Error(options.error);
+
+      const authenticationResponse = await startAuthentication({
+        optionsJSON: options,
+      });
+      const verifyResponse = await fetch("/api/auth/passkeys/login/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ response: authenticationResponse }),
+      });
+      const result = await verifyResponse.json();
+      if (!verifyResponse.ok) throw new Error(result.error);
+
+      router.replace("/dashboard");
+      router.refresh();
+    } catch (caughtError) {
+      const text =
+        caughtError instanceof Error && caughtError.name !== "NotAllowedError"
+          ? caughtError.message
+          : "Login dengan passkey dibatalkan.";
+      setError(text);
+    } finally {
+      setPasskeyLoading(false);
     }
   }
 
@@ -115,6 +162,28 @@ export default function LoginPage() {
             {loading ? "Memproses..." : "Masuk"}
           </button>
         </form>
+
+        <div className="flex items-center gap-3">
+          <div className="h-px flex-1 bg-gray-200" />
+          <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">atau</span>
+          <div className="h-px flex-1 bg-gray-200" />
+        </div>
+
+        <div className="space-y-2">
+          <button
+            type="button"
+            onClick={handlePasskeyLogin}
+            disabled={passkeyLoading || loading}
+            className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white py-3 text-sm font-bold text-gray-800 shadow-sm transition hover:bg-gray-50 disabled:cursor-wait disabled:opacity-60"
+          >
+            <Fingerprint className="h-4.5 w-4.5" />
+            {passkeyLoading ? "Memverifikasi..." : "Masuk dengan Passkey"}
+          </button>
+          <p className="text-center text-[10px] leading-relaxed text-gray-400">
+            Face ID, sidik jari, Windows Hello, atau PIN perangkat setelah diaktifkan dari halaman
+            Informasi.
+          </p>
+        </div>
 
         <p className="text-center text-xs text-gray-500">
           Belum punya akun?{" "}

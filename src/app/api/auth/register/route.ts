@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
-import { SESSION_COOKIE, signToken } from "@/lib/auth";
+import { setSessionCookie, signToken } from "@/lib/auth";
 import { PRIVATE_RESPONSE_HEADERS, privateJson, requireJson, safeText } from "@/lib/api-security";
 import { emailIndex, encryptUserEmail, encryptUserName, normalizeEmail } from "@/lib/user-crypto";
 
@@ -53,13 +53,7 @@ export async function POST(req: NextRequest) {
       },
       { headers: PRIVATE_RESPONSE_HEADERS },
     );
-    response.cookies.set(SESSION_COOKIE, token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: 60 * 60 * 12,
-      path: "/",
-    });
+    setSessionCookie(response, token);
 
     return response;
   } catch {
