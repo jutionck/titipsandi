@@ -108,6 +108,9 @@ Jika memakai Vercel Preview, gunakan project/database terpisah dari production.
 Jangan memasang nilai WebAuthn production pada Preview karena passkey terikat
 pada origin dan RP ID. Tanpa variabel tersebut, aplikasi memakai origin request.
 
+Jangan menyalin nilai production tersebut ke `.env.development.local`.
+Jika memakai Vercel Preview, gunakan project/database terpisah dari production.
+
 Jalankan migration secara terkontrol dengan `npm run db:deploy` sebelum
 mengalihkan traffic. Build Vercel otomatis menjalankan `prisma generate`.
 
