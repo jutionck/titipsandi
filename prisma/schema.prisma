@@ -12,6 +12,7 @@ model User {
   name         String
   email        String
   emailHash    String   @unique
+  emailHashV2  String?  @unique
   passwordHash String
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt

@@ -9,7 +9,12 @@ import {
   requestClientIp,
 } from "@/lib/api-security";
 import { clearRateLimits, enforceRateLimits } from "@/lib/rate-limit";
-import { decryptUserEmail, decryptUserName, emailIndex, normalizeEmail } from "@/lib/user-crypto";
+import {
+  decryptUserEmail,
+  decryptUserName,
+  emailIndexCandidates,
+  normalizeEmail,
+} from "@/lib/user-crypto";
 
 export async function POST(req: NextRequest) {
   try {
@@ -25,6 +30,7 @@ export async function POST(req: NextRequest) {
     }
 
     const normalizedEmail = normalizeEmail(email);
+    const indexes = emailIndexCandidates(normalizedEmail);
     const rateLimitPolicies = [
       {
         scope: "login-ip",
@@ -42,8 +48,10 @@ export async function POST(req: NextRequest) {
     const rateLimitResponse = await enforceRateLimits(rateLimitPolicies);
     if (rateLimitResponse) return rateLimitResponse;
 
-    const user = await prisma.user.findUnique({
-      where: { emailHash: emailIndex(normalizedEmail) },
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [{ emailHash: { in: indexes.legacy } }, { emailHashV2: { in: indexes.derived } }],
+      },
     });
     if (!user) {
       return privateJson({ error: "Email atau password salah" }, { status: 401 });
@@ -52,6 +60,13 @@ export async function POST(req: NextRequest) {
     const valid = await bcrypt.compare(password, user.passwordHash);
     if (!valid) {
       return privateJson({ error: "Email atau password salah" }, { status: 401 });
+    }
+
+    if (user.emailHashV2 !== indexes.current) {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { emailHashV2: indexes.current },
+      });
     }
 
     const token = await signToken({ userId: user.id });

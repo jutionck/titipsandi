@@ -20,6 +20,8 @@ Perlindungan yang dituju:
   pribadi yang dienkripsi.
 - Repo publik tidak memuat credential atau encryption key.
 - Ciphertext yang diubah atau dipindahkan antar-field gagal diautentikasi.
+- Ciphertext v2 memisahkan subkey field encryption dan blind index dengan HKDF,
+  serta menyimpan fingerprint non-secret untuk memilih key saat rotasi.
 - Kode akses darurat tidak dapat dipulihkan dari hash database.
 - Login passkey memverifikasi challenge, origin, RP ID, signature counter, dan
   user verification. Data biometrik maupun PIN perangkat tidak diterima server.
@@ -40,7 +42,8 @@ Di luar perlindungan saat ini:
 ## Pengelolaan secret
 
 - Simpan `DATABASE_URL`, `MIGRATION_DATABASE_URL`, `JWT_SECRET`, dan
-  `ENCRYPTION_KEY` hanya di secret manager environment.
+  `ENCRYPTION_KEY` hanya di secret manager environment. Perlakukan seluruh nilai
+  `ENCRYPTION_KEY_PREVIOUS` dengan tingkat perlindungan yang sama.
 - Tetapkan `WEBAUTHN_ORIGIN` dan `WEBAUTHN_RP_ID` ke domain canonical production.
   Endpoint passkey gagal secara tertutup jika nilai production hilang atau tidak
   cocok. Perubahan domain membuat passkey lama tidak dapat dipakai pada domain baru.
@@ -48,7 +51,9 @@ Di luar perlindungan saat ini:
 - Jangan mengirim secret melalui issue, log, screenshot, atau chat publik.
 - Backup terenkripsi harus diuji pemulihannya.
 - Rotasi `JWT_SECRET` mengakhiri semua sesi. Rotasi `ENCRYPTION_KEY` memerlukan
-  migrasi/re-enkripsi data terlebih dahulu.
+  key lama tetap tersedia di `ENCRYPTION_KEY_PREVIOUS` sampai re-enkripsi dan
+  migrasi blind index selesai. Jangan menghapus key lama hanya karena key baru
+  sudah aktif.
 
 ## Pelaporan kerentanan
 

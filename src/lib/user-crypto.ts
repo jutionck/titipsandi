@@ -1,4 +1,11 @@
-import { blindIndex, decrypt, encrypt } from "@/lib/encryption";
+import {
+  blindIndex,
+  blindIndexCandidates,
+  decrypt,
+  encrypt,
+  legacyBlindIndex,
+  legacyBlindIndexCandidates,
+} from "@/lib/encryption";
 
 export function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
@@ -6,6 +13,19 @@ export function normalizeEmail(email: string) {
 
 export function emailIndex(email: string) {
   return blindIndex(normalizeEmail(email), "user.email");
+}
+
+export function legacyEmailIndex(email: string) {
+  return legacyBlindIndex(normalizeEmail(email), "user.email");
+}
+
+export function emailIndexCandidates(email: string) {
+  const normalized = normalizeEmail(email);
+  return {
+    current: blindIndex(normalized, "user.email"),
+    derived: blindIndexCandidates(normalized, "user.email"),
+    legacy: legacyBlindIndexCandidates(normalized, "user.email"),
+  };
 }
 
 export function encryptUserName(name: string, userId: string) {

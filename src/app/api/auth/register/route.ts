@@ -11,7 +11,13 @@ import {
   safeText,
 } from "@/lib/api-security";
 import { enforceRateLimits } from "@/lib/rate-limit";
-import { emailIndex, encryptUserEmail, encryptUserName, normalizeEmail } from "@/lib/user-crypto";
+import {
+  emailIndexCandidates,
+  encryptUserEmail,
+  encryptUserName,
+  legacyEmailIndex,
+  normalizeEmail,
+} from "@/lib/user-crypto";
 
 export async function POST(req: NextRequest) {
   try {
@@ -42,9 +48,11 @@ export async function POST(req: NextRequest) {
     ]);
     if (rateLimitResponse) return rateLimitResponse;
 
-    const hash = emailIndex(normalizedEmail);
-    const existing = await prisma.user.findUnique({
-      where: { emailHash: hash },
+    const indexes = emailIndexCandidates(normalizedEmail);
+    const existing = await prisma.user.findFirst({
+      where: {
+        OR: [{ emailHash: { in: indexes.legacy } }, { emailHashV2: { in: indexes.derived } }],
+      },
     });
     if (existing) {
       return privateJson({ error: "Email sudah terdaftar" }, { status: 409 });
@@ -57,7 +65,8 @@ export async function POST(req: NextRequest) {
         id: userId,
         name: encryptUserName(cleanName, userId),
         email: encryptUserEmail(normalizedEmail, userId),
-        emailHash: hash,
+        emailHash: legacyEmailIndex(normalizedEmail),
+        emailHashV2: indexes.current,
         passwordHash,
       },
     });

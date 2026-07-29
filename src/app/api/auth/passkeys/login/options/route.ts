@@ -4,7 +4,7 @@ import { setPasskeyChallengeCookie, signPasskeyChallenge } from "@/lib/auth";
 import { privateJson, readBoundedJson, requestClientIp } from "@/lib/api-security";
 import { prisma } from "@/lib/prisma";
 import { enforceRateLimits } from "@/lib/rate-limit";
-import { emailIndex, normalizeEmail } from "@/lib/user-crypto";
+import { emailIndexCandidates, normalizeEmail } from "@/lib/user-crypto";
 import { decodeTransports, getWebAuthnConfig } from "@/lib/webauthn";
 
 export async function POST(req: NextRequest) {
@@ -31,9 +31,12 @@ export async function POST(req: NextRequest) {
   ]);
   if (rateLimitResponse) return rateLimitResponse;
 
-  const user = email
-    ? await prisma.user.findUnique({
-        where: { emailHash: emailIndex(email) },
+  const indexes = email ? emailIndexCandidates(email) : null;
+  const user = indexes
+    ? await prisma.user.findFirst({
+        where: {
+          OR: [{ emailHash: { in: indexes.legacy } }, { emailHashV2: { in: indexes.derived } }],
+        },
         include: { passkeys: true },
       })
     : null;

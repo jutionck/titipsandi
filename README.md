@@ -21,6 +21,9 @@ bersifat open source dan dapat di-self-host.
   catatan, dienkripsi dengan AES-256-GCM sebelum masuk ke PostgreSQL.
 - Nama dan email pengguna serta data pribadi kontak terpercaya juga dienkripsi.
   Pencarian email login menggunakan blind index berbasis HMAC.
+- Format ciphertext v2 memakai HKDF-SHA-256 untuk memisahkan subkey enkripsi dan
+  blind index. Ciphertext v1 tetap dapat dibaca selama rollout, dan key lama
+  dapat dipasang sementara melalui keyring untuk rotasi tanpa downtime.
 - Kode darurat menggunakan random 128-bit, hanya ditampilkan sekali, dan hanya
   hash SHA-256-nya yang disimpan.
 - Cookie sesi bersifat `HttpOnly`, `SameSite=Strict`, dan `Secure` di production.
@@ -39,8 +42,8 @@ bersifat open source dan dapat di-self-host.
 
 Metadata berikut masih terlihat oleh administrator database: ID internal,
 kategori vault, waktu pembuatan/perubahan, relasi antar-record, status aktivasi
-akses darurat, password hash login, blind index email, hash kode darurat, serta
-metadata dan public key passkey.
+akses darurat, password hash login, blind index email versi lama dan baru, hash
+kode darurat, serta metadata dan public key passkey.
 Lihat [SECURITY.md](SECURITY.md) untuk threat model dan pelaporan kerentanan.
 
 ## Prasyarat
@@ -68,6 +71,8 @@ DATABASE_URL="postgresql://postgres:postgres@127.0.0.1:5432/titipsandi_dev"
 MIGRATION_DATABASE_URL="postgresql://postgres:postgres@127.0.0.1:5432/titipsandi_dev"
 JWT_SECRET="64-karakter-hex-acak"
 ENCRYPTION_KEY="64-karakter-hex-acak"
+ENCRYPTION_KEY_PREVIOUS=""
+ENCRYPTION_WRITE_VERSION="v1"
 ```
 
 Buat secret terpisah:
@@ -108,6 +113,8 @@ Tambahkan environment variables berikut untuk Production:
 - `MIGRATION_DATABASE_URL` (opsional jika memakai derivasi otomatis)
 - `JWT_SECRET`
 - `ENCRYPTION_KEY`
+- `ENCRYPTION_KEY_PREVIOUS` (kosong jika belum melakukan rotasi)
+- `ENCRYPTION_WRITE_VERSION=v1` untuk rollout awal
 - `WEBAUTHN_ORIGIN=https://titipsandi.com`
 - `WEBAUTHN_RP_ID=titipsandi.com`
 
@@ -122,6 +129,26 @@ WebAuthn khusus environment tersebut; tanpa itu, gunakan Master Password.
 Jalankan migration secara terkontrol dengan `npm run db:deploy` sebelum
 mengalihkan traffic. Migration juga membuat tabel rate-limit yang diperlukan
 endpoint autentikasi. Build Vercel otomatis menjalankan `prisma generate`.
+
+## Rollout key separation dan rotasi
+
+Format baru sengaja tidak aktif otomatis agar deployment dapat di-rollback
+sebelum ciphertext v2 mulai ditulis.
+
+1. Deploy migration dan kode dengan `ENCRYPTION_WRITE_VERSION=v1`.
+2. Verifikasi login Master Password, passkey, pembacaan vault, dan emergency
+   access. Login berhasil akan mengisi blind index v2 secara bertahap.
+3. Setelah deployment stabil, ubah `ENCRYPTION_WRITE_VERSION=v2`. Record baru
+   dan record yang diedit mulai memakai subkey HKDF dan format ciphertext v2.
+4. Untuk mengganti master key, pindahkan nilai lama ke
+   `ENCRYPTION_KEY_PREVIOUS`, tetapkan key baru sebagai `ENCRYPTION_KEY`, lalu
+   deploy kedua nilai secara bersamaan.
+5. Jangan menghapus key previous sampai seluruh ciphertext v1/v2 dan blind index
+   yang bergantung pada key tersebut sudah dimigrasikan dan diverifikasi.
+
+`ENCRYPTION_KEY_PREVIOUS` menerima maksimal delapan key hex yang dipisahkan koma.
+Key aktif dan key sebelumnya tidak boleh sama. Kehilangan seluruh key yang dapat
+membuka suatu ciphertext berarti data tersebut tidak dapat dipulihkan.
 
 Jangan memasukkan `.env`, connection string, token Supabase, atau hasil dump
 database ke Git. `.gitignore` sudah menolak seluruh `.env*` kecuali

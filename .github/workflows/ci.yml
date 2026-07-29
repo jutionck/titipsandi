@@ -42,6 +42,8 @@ jobs:
       MIGRATION_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/titipsandi_test
       JWT_SECRET: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
       ENCRYPTION_KEY: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+      ENCRYPTION_KEY_PREVIOUS: ""
+      ENCRYPTION_WRITE_VERSION: v1
       WEBAUTHN_ORIGIN: https://titipsandi.test
       WEBAUTHN_RP_ID: titipsandi.test
 
@@ -72,7 +74,10 @@ jobs:
       - name: Run PostgreSQL integration tests
         env:
           RUN_DATABASE_TESTS: "1"
-        run: npm run test -- src/lib/rate-limit.integration.test.ts
+        run: >-
+          npm run test --
+          src/lib/rate-limit.integration.test.ts
+          src/lib/key-rotation.integration.test.ts
 
       - name: Audit production dependencies
         run: npm audit --omit=dev
