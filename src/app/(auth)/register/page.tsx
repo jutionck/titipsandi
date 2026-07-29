@@ -128,15 +128,13 @@ export default function RegisterPage() {
               <button
                 type="button"
                 onClick={() => setShowPassword((current) => !current)}
-                aria-label={showPassword ? "Sembunyikan Master Password" : "Tampilkan Master Password"}
+                aria-label={
+                  showPassword ? "Sembunyikan Master Password" : "Tampilkan Master Password"
+                }
                 aria-pressed={showPassword}
                 className="absolute inset-y-0 right-0 flex cursor-pointer items-center pr-3 text-gray-450 hover:text-gray-700"
               >
-                {showPassword ? (
-                  <EyeOff className="h-4 w-4" />
-                ) : (
-                  <Eye className="h-4 w-4" />
-                )}
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
           </div>
@@ -167,11 +165,7 @@ export default function RegisterPage() {
                 aria-pressed={showConfirmPassword}
                 className="absolute inset-y-0 right-0 flex cursor-pointer items-center pr-3 text-gray-450 hover:text-gray-700"
               >
-                {showConfirmPassword ? (
-                  <EyeOff className="h-4 w-4" />
-                ) : (
-                  <Eye className="h-4 w-4" />
-                )}
+                {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
           </div>

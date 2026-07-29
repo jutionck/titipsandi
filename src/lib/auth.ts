@@ -37,7 +37,7 @@ export function setSessionCookie(response: NextResponse, token: string) {
 }
 
 export async function signPasskeyChallenge(payload: {
-  userId: string;
+  userId?: string;
   challenge: string;
   purpose: "register" | "authenticate";
 }) {
@@ -58,14 +58,13 @@ export async function verifyPasskeyChallenge(token: string) {
       audience: PASSKEY_AUDIENCE,
     });
     if (
-      typeof payload.userId !== "string" ||
       typeof payload.challenge !== "string" ||
       (payload.purpose !== "register" && payload.purpose !== "authenticate")
     ) {
       return null;
     }
     return {
-      userId: payload.userId,
+      userId: typeof payload.userId === "string" ? payload.userId : undefined,
       challenge: payload.challenge,
       purpose: payload.purpose,
     };

@@ -44,7 +44,8 @@ export async function POST(req: NextRequest) {
       transports: decodeTransports(passkey.transports),
     })),
     authenticatorSelection: {
-      residentKey: "preferred",
+      residentKey: "required",
+      requireResidentKey: true,
       userVerification: "required",
     },
     preferredAuthenticatorType: "localDevice",

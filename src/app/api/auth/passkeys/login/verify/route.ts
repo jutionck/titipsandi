@@ -30,13 +30,10 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
     const credentialResponse = body.response as AuthenticationResponseJSON;
-    const passkey = await prisma.passkey.findFirst({
-      where: {
-        id: credentialResponse?.id,
-        userId: challenge.userId,
-      },
+    const passkey = await prisma.passkey.findUnique({
+      where: { id: credentialResponse?.id },
     });
-    if (!passkey) {
+    if (!passkey || (challenge.userId && passkey.userId !== challenge.userId)) {
       return privateJson({ error: "Passkey tidak dikenal" }, { status: 400 });
     }
 

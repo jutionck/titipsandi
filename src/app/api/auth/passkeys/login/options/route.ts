@@ -13,30 +13,29 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json();
   const email = typeof body.email === "string" ? normalizeEmail(body.email) : "";
-  if (!email) {
-    return privateJson({ error: "Masukkan email terlebih dahulu" }, { status: 400 });
-  }
-
-  const user = await prisma.user.findUnique({
-    where: { emailHash: emailIndex(email) },
-    include: { passkeys: true },
-  });
-  if (!user || user.passkeys.length === 0) {
-    return privateJson({ error: "Passkey belum tersedia untuk akun ini" }, { status: 400 });
-  }
+  const user = email
+    ? await prisma.user.findUnique({
+        where: { emailHash: emailIndex(email) },
+        include: { passkeys: true },
+      })
+    : null;
 
   const { rpID } = getWebAuthnConfig(req);
   const options = await generateAuthenticationOptions({
     rpID,
-    allowCredentials: user.passkeys.map((passkey) => ({
-      id: passkey.id,
-      transports: decodeTransports(passkey.transports),
-    })),
+    ...(user?.passkeys.length
+      ? {
+          allowCredentials: user.passkeys.map((passkey) => ({
+            id: passkey.id,
+            transports: decodeTransports(passkey.transports),
+          })),
+        }
+      : {}),
     userVerification: "required",
   });
 
   const challengeToken = await signPasskeyChallenge({
-    userId: user.id,
+    userId: user?.id,
     challenge: options.challenge,
     purpose: "authenticate",
   });

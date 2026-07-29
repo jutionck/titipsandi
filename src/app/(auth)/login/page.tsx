@@ -43,10 +43,6 @@ export default function LoginPage() {
 
   async function handlePasskeyLogin() {
     setError("");
-    if (!email.trim()) {
-      setError("Masukkan email terlebih dahulu untuk memakai passkey.");
-      return;
-    }
     if (!window.PublicKeyCredential || !window.isSecureContext) {
       setError("Passkey memerlukan browser modern melalui HTTPS.");
       return;
@@ -77,9 +73,11 @@ export default function LoginPage() {
       router.refresh();
     } catch (caughtError) {
       const text =
-        caughtError instanceof Error && caughtError.name !== "NotAllowedError"
-          ? caughtError.message
-          : "Login dengan passkey dibatalkan.";
+        caughtError instanceof Error && caughtError.name === "NotAllowedError"
+          ? "Passkey tidak ditemukan untuk alamat aplikasi ini. Gunakan domain yang sama seperti saat passkey diaktifkan."
+          : caughtError instanceof Error
+            ? caughtError.message
+            : "Login dengan passkey gagal.";
       setError(text);
     } finally {
       setPasskeyLoading(false);
@@ -180,8 +178,8 @@ export default function LoginPage() {
             {passkeyLoading ? "Memverifikasi..." : "Masuk dengan Passkey"}
           </button>
           <p className="text-center text-[10px] leading-relaxed text-gray-400">
-            Face ID, sidik jari, Windows Hello, atau PIN perangkat setelah diaktifkan dari halaman
-            Informasi.
+            Tidak perlu mengisi email. Gunakan Face ID, sidik jari, Windows Hello, atau PIN
+            perangkat setelah diaktifkan dari halaman Informasi.
           </p>
         </div>
 
