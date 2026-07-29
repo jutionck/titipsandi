@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import BottomNav from "@/components/BottomNav";
+import LogoutButton from "@/components/LogoutButton";
 import {
   Trash2,
   Copy,
@@ -15,10 +16,9 @@ import {
   ShieldCheck,
   Shield,
   Users,
-  LogOut,
   Plus,
   Info,
-  ChevronDown
+  ChevronDown,
 } from "lucide-react";
 
 interface TrustedContact {
@@ -108,12 +108,6 @@ export default function TrustedContactsPage() {
     }
   }
 
-  async function handleLogout() {
-    if (!confirm("Keluar dari aplikasi?")) return;
-    await fetch("/api/auth/logout", { method: "POST" });
-    router.push("/login");
-  }
-
   async function handleDelete(id: string) {
     if (!confirm("Yakin ingin menghapus kontak darurat ini?")) return;
     await fetch(`/api/trusted/${id}`, { method: "DELETE" });
@@ -139,26 +133,35 @@ export default function TrustedContactsPage() {
 
           {/* Desktop Nav */}
           <div className="hidden sm:flex items-center gap-4">
-            <Link href="/dashboard" className="text-xs font-bold text-gray-500 hover:text-gray-900 flex items-center gap-1">
+            <Link
+              href="/dashboard"
+              className="text-xs font-bold text-gray-500 hover:text-gray-900 flex items-center gap-1"
+            >
               <Shield className="w-3.5 h-3.5" />
               Vault
             </Link>
-            <Link href="/trusted" className="text-xs font-bold text-gray-900 hover:text-gray-955 flex items-center gap-1">
+            <Link
+              href="/trusted"
+              className="text-xs font-bold text-gray-900 hover:text-gray-955 flex items-center gap-1"
+            >
               <Users className="w-3.5 h-3.5" />
               Kontak Darurat
             </Link>
-            <Link href="/vault/new" className="text-xs font-bold text-gray-500 hover:text-gray-900 flex items-center gap-1">
+            <Link
+              href="/vault/new"
+              className="text-xs font-bold text-gray-500 hover:text-gray-900 flex items-center gap-1"
+            >
               <Plus className="w-3.5 h-3.5" />
               Tambah
             </Link>
-            <Link href="/info" className="text-xs font-bold text-gray-500 hover:text-gray-900 flex items-center gap-1">
+            <Link
+              href="/info"
+              className="text-xs font-bold text-gray-500 hover:text-gray-900 flex items-center gap-1"
+            >
               <Info className="w-3.5 h-3.5" />
               Informasi
             </Link>
-            <button onClick={handleLogout} className="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1 cursor-pointer">
-              <LogOut className="w-3.5 h-3.5" />
-              Keluar
-            </button>
+            <LogoutButton className="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1 cursor-pointer" />
           </div>
 
           <span className="sm:hidden text-[10px] font-bold text-gray-400 uppercase tracking-widest bg-gray-100 py-1 px-2.5 rounded-full">
@@ -171,7 +174,8 @@ export default function TrustedContactsPage() {
         <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex gap-3 items-start">
           <ShieldAlert className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
           <div className="text-xs text-amber-800 leading-relaxed font-medium">
-            <strong>Penting:</strong> Kode darurat hanya ditampilkan satu kali saat kontak dibuat. Simpan dan bagikan melalui kanal yang aman; kode ini memberikan akses ke isi brankas.
+            <strong>Penting:</strong> Kode darurat hanya ditampilkan satu kali saat kontak dibuat.
+            Simpan dan bagikan melalui kanal yang aman; kode ini memberikan akses ke isi brankas.
           </div>
         </div>
 
@@ -182,8 +186,8 @@ export default function TrustedContactsPage() {
                 Simpan kode ini sekarang
               </p>
               <p className="text-xs text-red-700 mt-1">
-                Demi keamanan, server hanya menyimpan hash dan tidak dapat
-                menampilkan kode ini lagi.
+                Demi keamanan, server hanya menyimpan hash dan tidak dapat menampilkan kode ini
+                lagi.
               </p>
             </div>
             <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
@@ -245,9 +249,7 @@ export default function TrustedContactsPage() {
                 <input
                   type="text"
                   value={form.name}
-                  onChange={(e) =>
-                    setForm((prev) => ({ ...prev, name: e.target.value }))
-                  }
+                  onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
                   required
                   className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none text-sm font-semibold transition"
                   placeholder="Nama"
@@ -276,26 +278,28 @@ export default function TrustedContactsPage() {
                         className="fixed inset-0 z-30"
                       />
                       <div className="absolute z-45 left-0 right-0 mt-2 bg-white border border-gray-200 rounded-2xl shadow-lg max-h-60 overflow-y-auto p-1.5 space-y-0.5 animate-in fade-in zoom-in-95 duration-100">
-                        {["Istri", "Suami", "Anak", "Orang Tua", "Saudara", "Lainnya"].map((rel) => {
-                          const isSelected = form.relation === rel;
-                          return (
-                            <button
-                              key={rel}
-                              type="button"
-                              onClick={() => {
-                                setForm((prev) => ({ ...prev, relation: rel }));
-                                setIsRelationOpen(false);
-                              }}
-                              className={`w-full text-left px-3 py-2 rounded-xl text-sm font-semibold transition cursor-pointer ${
-                                isSelected
-                                  ? "bg-gray-900 text-white"
-                                  : "text-gray-700 hover:bg-gray-50"
-                              }`}
-                            >
-                              {rel}
-                            </button>
-                          );
-                        })}
+                        {["Istri", "Suami", "Anak", "Orang Tua", "Saudara", "Lainnya"].map(
+                          (rel) => {
+                            const isSelected = form.relation === rel;
+                            return (
+                              <button
+                                key={rel}
+                                type="button"
+                                onClick={() => {
+                                  setForm((prev) => ({ ...prev, relation: rel }));
+                                  setIsRelationOpen(false);
+                                }}
+                                className={`w-full text-left px-3 py-2 rounded-xl text-sm font-semibold transition cursor-pointer ${
+                                  isSelected
+                                    ? "bg-gray-900 text-white"
+                                    : "text-gray-700 hover:bg-gray-50"
+                                }`}
+                              >
+                                {rel}
+                              </button>
+                            );
+                          },
+                        )}
                       </div>
                     </>
                   )}
@@ -311,9 +315,7 @@ export default function TrustedContactsPage() {
                 <input
                   type="email"
                   value={form.email}
-                  onChange={(e) =>
-                    setForm((prev) => ({ ...prev, email: e.target.value }))
-                  }
+                  onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))}
                   required
                   className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none text-sm font-semibold transition"
                   placeholder="email@contoh.com"
@@ -326,9 +328,7 @@ export default function TrustedContactsPage() {
                 <input
                   type="tel"
                   value={form.phone}
-                  onChange={(e) =>
-                    setForm((prev) => ({ ...prev, phone: e.target.value }))
-                  }
+                  onChange={(e) => setForm((prev) => ({ ...prev, phone: e.target.value }))}
                   className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none text-sm font-semibold transition"
                   placeholder="0812..."
                 />
@@ -350,7 +350,9 @@ export default function TrustedContactsPage() {
         ) : contacts.length === 0 ? (
           <div className="bg-white border border-gray-200 rounded-2xl p-12 text-center space-y-2 shadow-sm">
             <p className="text-sm font-bold text-gray-900">Belum ada kontak darurat</p>
-            <p className="text-xs text-gray-500">Mulai daftarkan keluarga terdekat untuk mewariskan password Anda.</p>
+            <p className="text-xs text-gray-500">
+              Mulai daftarkan keluarga terdekat untuk mewariskan password Anda.
+            </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -362,7 +364,9 @@ export default function TrustedContactsPage() {
                 <div className="flex items-start justify-between">
                   <div>
                     <h3 className="text-sm font-bold text-gray-900">{contact.name}</h3>
-                    <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mt-0.5">{contact.relation}</p>
+                    <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mt-0.5">
+                      {contact.relation}
+                    </p>
                     <p className="text-xs text-gray-500 mt-2">
                       {contact.email} {contact.phone && `· ${contact.phone}`}
                     </p>
@@ -378,7 +382,10 @@ export default function TrustedContactsPage() {
                 {contact.isActivated ? (
                   <div className="inline-flex items-center gap-1.5 text-[10px] text-amber-600 bg-amber-50 py-1.5 px-3 rounded-lg border border-amber-100 font-medium">
                     <Clock className="w-3.5 h-3.5" />
-                    <span>Telah diakses pada {new Date(contact.activatedAt!).toLocaleDateString("id-ID")}</span>
+                    <span>
+                      Telah diakses pada{" "}
+                      {new Date(contact.activatedAt!).toLocaleDateString("id-ID")}
+                    </span>
                   </div>
                 ) : (
                   <div className="inline-flex items-center gap-1.5 text-[10px] text-green-600 bg-green-50 py-1.5 px-3 rounded-lg border border-green-100 font-medium w-fit">

@@ -36,26 +36,25 @@ Lihat [SECURITY.md](SECURITY.md) untuk threat model dan pelaporan kerentanan.
 
 - Node.js 20.19 atau lebih baru
 - npm
-- Project Supabase
+- PostgreSQL lokal untuk development
+- Project Supabase untuk deployment production
 
-## Setup Supabase
+## Setup development lokal
 
-1. Buat project di Supabase.
-2. Dari halaman **Connect**, salin dua connection string:
-   - Transaction pooler port `6543` untuk `DATABASE_URL` di Vercel.
-   - Session pooler port `5432` untuk `MIGRATION_DATABASE_URL` bila ingin
-     mengaturnya secara eksplisit. Endpoint ini mendukung jaringan IPv4.
-3. URL-encode password database bila mengandung karakter khusus.
+1. Jalankan PostgreSQL lokal.
+2. Buat database kosong bernama `titipsandi_dev`.
+3. Salin `.env.example` menjadi `.env.development.local`, lalu sesuaikan
+   username dan password PostgreSQL lokal.
 
 Migrasi yang tersedia membuat database PostgreSQL baru. Data dari `dev.db`
 SQLite lama tidak dipindahkan otomatis; jangan menghapus file lama sebelum
 proses export/import terverifikasi.
 
-Salin `.env.example` menjadi `.env`, lalu isi:
+Isi secret development di `.env` atau `.env.development.local`:
 
 ```env
-DATABASE_URL="postgresql://postgres.PROJECT_REF:PASSWORD@REGION.pooler.supabase.com:6543/postgres?sslmode=require"
-MIGRATION_DATABASE_URL="postgresql://postgres.PROJECT_REF:PASSWORD@REGION.pooler.supabase.com:5432/postgres?sslmode=require"
+DATABASE_URL="postgresql://postgres:postgres@127.0.0.1:5432/titipsandi_dev"
+MIGRATION_DATABASE_URL="postgresql://postgres:postgres@127.0.0.1:5432/titipsandi_dev"
 JWT_SECRET="64-karakter-hex-acak"
 ENCRYPTION_KEY="64-karakter-hex-acak"
 ```
@@ -80,18 +79,27 @@ npm run dev
 ```
 
 `db:deploy` memakai `MIGRATION_DATABASE_URL`. Jika variabel itu tidak tersedia,
-konfigurasi otomatis memakai `DATABASE_URL` dengan session pooler port `5432`.
+konfigurasi otomatis memakai `DATABASE_URL`. Prisma memuat file environment
+dengan urutan yang sama seperti aplikasi, sehingga migrasi lokal juga tidak
+mengarah ke Supabase.
 Jangan menjalankan `prisma db push` pada database production.
 
 ## Deployment Vercel
 
-Tambahkan environment variables berikut untuk Production, Preview, dan
-Development sesuai kebutuhan:
+Di Vercel, buat project Supabase lalu salin connection string dari halaman
+**Connect**. Gunakan transaction pooler port `6543` untuk `DATABASE_URL` dan
+session pooler port `5432` untuk `MIGRATION_DATABASE_URL`. URL-encode password
+database bila mengandung karakter khusus.
+
+Tambahkan environment variables berikut untuk Production:
 
 - `DATABASE_URL`
 - `MIGRATION_DATABASE_URL` (opsional jika memakai derivasi otomatis)
 - `JWT_SECRET`
 - `ENCRYPTION_KEY`
+
+Jangan menyalin nilai production tersebut ke `.env.development.local`.
+Jika memakai Vercel Preview, gunakan project/database terpisah dari production.
 
 Jalankan migration secara terkontrol dengan `npm run db:deploy` sebelum
 mengalihkan traffic. Build Vercel otomatis menjalankan `prisma generate`.
@@ -99,6 +107,10 @@ mengalihkan traffic. Build Vercel otomatis menjalankan `prisma generate`.
 Jangan memasukkan `.env`, connection string, token Supabase, atau hasil dump
 database ke Git. `.gitignore` sudah menolak seluruh `.env*` kecuali
 `.env.example`.
+
+Untuk mengarahkan tombol dukungan ke profil Saweria maintainer, isi
+`NEXT_PUBLIC_DEVELOPER_DONATION_URL`. Jika kosong, tombol tetap tampil dan
+mengarah ke halaman utama Saweria.
 
 ## Pengembangan
 

@@ -9,7 +9,7 @@ import {
   ShieldAlert,
   Tv,
   Briefcase,
-  Folder
+  Folder,
 } from "lucide-react";
 
 export const CATEGORIES = [
@@ -27,6 +27,10 @@ export const CATEGORIES = [
 ] as const;
 
 export type CategoryValue = (typeof CATEGORIES)[number]["value"];
+
+export function isCategoryValue(value: string): value is CategoryValue {
+  return CATEGORIES.some((category) => category.value === value);
+}
 
 export function getCategoryLabel(value: string) {
   return CATEGORIES.find((c) => c.value === value)?.label || value;

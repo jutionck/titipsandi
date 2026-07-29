@@ -7,28 +7,20 @@ const FORMAT_VERSION = "v1";
 function getKey(): Buffer {
   const key = process.env.ENCRYPTION_KEY;
   if (!key || !/^[a-f0-9]{64}$/i.test(key)) {
-    throw new Error(
-      "ENCRYPTION_KEY wajib berupa 32-byte hex (64 karakter)."
-    );
+    throw new Error("ENCRYPTION_KEY wajib berupa 32-byte hex (64 karakter).");
   }
   return Buffer.from(key, "hex");
 }
 
 export function blindIndex(value: string, context: string): string {
-  return crypto
-    .createHmac("sha256", getKey())
-    .update(`${context}\0${value}`)
-    .digest("hex");
+  return crypto.createHmac("sha256", getKey()).update(`${context}\0${value}`).digest("hex");
 }
 
 export function encrypt(text: string, context: string): string {
   const iv = crypto.randomBytes(IV_LENGTH);
   const cipher = crypto.createCipheriv(ALGORITHM, getKey(), iv);
   cipher.setAAD(Buffer.from(`brankas:${context}`, "utf8"));
-  const encrypted = Buffer.concat([
-    cipher.update(text, "utf8"),
-    cipher.final(),
-  ]);
+  const encrypted = Buffer.concat([cipher.update(text, "utf8"), cipher.final()]);
   const tag = cipher.getAuthTag();
   return [
     FORMAT_VERSION,
@@ -52,7 +44,5 @@ export function decrypt(encryptedText: string, context: string): string {
   const decipher = crypto.createDecipheriv(ALGORITHM, getKey(), iv);
   decipher.setAAD(Buffer.from(`brankas:${context}`, "utf8"));
   decipher.setAuthTag(tag);
-  return Buffer.concat([decipher.update(encrypted), decipher.final()]).toString(
-    "utf8"
-  );
+  return Buffer.concat([decipher.update(encrypted), decipher.final()]).toString("utf8");
 }

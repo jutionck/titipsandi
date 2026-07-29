@@ -3,12 +3,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { SESSION_COOKIE, signToken } from "@/lib/auth";
 import { PRIVATE_RESPONSE_HEADERS, privateJson, requireJson } from "@/lib/api-security";
-import {
-  decryptUserEmail,
-  decryptUserName,
-  emailIndex,
-  normalizeEmail,
-} from "@/lib/user-crypto";
+import { decryptUserEmail, decryptUserName, emailIndex, normalizeEmail } from "@/lib/user-crypto";
 
 export async function POST(req: NextRequest) {
   try {
@@ -19,10 +14,7 @@ export async function POST(req: NextRequest) {
     const { email, password } = await req.json();
 
     if (typeof email !== "string" || typeof password !== "string") {
-      return NextResponse.json(
-        { error: "Email dan password wajib diisi" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Email dan password wajib diisi" }, { status: 400 });
     }
 
     const normalizedEmail = normalizeEmail(email);
@@ -30,18 +22,12 @@ export async function POST(req: NextRequest) {
       where: { emailHash: emailIndex(normalizedEmail) },
     });
     if (!user) {
-      return privateJson(
-        { error: "Email atau password salah" },
-        { status: 401 }
-      );
+      return privateJson({ error: "Email atau password salah" }, { status: 401 });
     }
 
     const valid = await bcrypt.compare(password, user.passwordHash);
     if (!valid) {
-      return privateJson(
-        { error: "Email atau password salah" },
-        { status: 401 }
-      );
+      return privateJson({ error: "Email atau password salah" }, { status: 401 });
     }
 
     const token = await signToken({ userId: user.id });
@@ -55,7 +41,7 @@ export async function POST(req: NextRequest) {
           email: decryptUserEmail(user.email, user.id),
         },
       },
-      { headers: PRIVATE_RESPONSE_HEADERS }
+      { headers: PRIVATE_RESPONSE_HEADERS },
     );
     response.cookies.set(SESSION_COOKIE, token, {
       httpOnly: true,
@@ -67,9 +53,6 @@ export async function POST(req: NextRequest) {
 
     return response;
   } catch {
-    return privateJson(
-      { error: "Terjadi kesalahan server" },
-      { status: 500 }
-    );
+    return privateJson({ error: "Terjadi kesalahan server" }, { status: 500 });
   }
 }
