@@ -49,7 +49,10 @@ export default function RegisterPage() {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col justify-between p-6">
       <div className="w-full max-w-sm mx-auto">
-        <Link href="/" className="inline-flex items-center gap-2 text-xs font-semibold text-gray-500 hover:text-gray-900 mb-6 py-1.5 px-3 bg-white border border-gray-200 rounded-full transition shadow-sm">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-2 text-xs font-semibold text-gray-500 hover:text-gray-900 mb-6 py-1.5 px-3 bg-white border border-gray-200 rounded-full transition shadow-sm"
+        >
           <ArrowLeft className="w-3.5 h-3.5" /> Kembali
         </Link>
       </div>

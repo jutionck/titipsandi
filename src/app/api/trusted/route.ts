@@ -42,10 +42,7 @@ export async function POST(req: NextRequest) {
     const cleanRelation = safeText(relation, 100);
 
     if (!cleanName || !cleanEmail || !cleanRelation) {
-      return privateJson(
-        { error: "Nama, email, dan hubungan wajib diisi" },
-        { status: 400 }
-      );
+      return privateJson({ error: "Nama, email, dan hubungan wajib diisi" }, { status: 400 });
     }
 
     const emergencyCode = generateEmergencyCode();
@@ -66,14 +63,8 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    return privateJson(
-      { contact: publicContact(contact), emergencyCode },
-      { status: 201 }
-    );
+    return privateJson({ contact: publicContact(contact), emergencyCode }, { status: 201 });
   } catch {
-    return privateJson(
-      { error: "Terjadi kesalahan server" },
-      { status: 500 }
-    );
+    return privateJson({ error: "Terjadi kesalahan server" }, { status: 500 });
   }
 }

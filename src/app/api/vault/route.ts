@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { privateJson, requireJson, safeText } from "@/lib/api-security";
 import { encryptVaultField, publicVaultEntry } from "@/lib/vault-crypto";
+import { isCategoryValue } from "@/lib/categories";
 
 export async function GET(req: NextRequest) {
   const session = await getSession();
@@ -32,7 +33,7 @@ export async function GET(req: NextRequest) {
       (e) =>
         e.title.toLowerCase().includes(s) ||
         e.username?.toLowerCase().includes(s) ||
-        e.email?.toLowerCase().includes(s)
+        e.email?.toLowerCase().includes(s),
     );
   }
 
@@ -56,16 +57,16 @@ export async function POST(req: NextRequest) {
     const cleanTitle = safeText(title, 200);
     const cleanPassword = typeof password === "string" ? password : "";
 
-    if (
-      !/^[a-z0-9-]+$/i.test(cleanCategory) ||
-      !cleanTitle ||
-      !cleanPassword ||
-      cleanPassword.length > 10_000
-    ) {
-      return privateJson(
-        { error: "Kategori, judul, dan password wajib diisi" },
-        { status: 400 }
-      );
+    if (!cleanCategory || !cleanTitle || !cleanPassword) {
+      return privateJson({ error: "Kategori, judul, dan password wajib diisi" }, { status: 400 });
+    }
+
+    if (!isCategoryValue(cleanCategory)) {
+      return privateJson({ error: "Kategori tidak valid" }, { status: 400 });
+    }
+
+    if (cleanPassword.length > 10_000) {
+      return privateJson({ error: "Password melebihi batas 10.000 karakter" }, { status: 400 });
     }
 
     const entryId = crypto.randomUUID();
@@ -75,11 +76,7 @@ export async function POST(req: NextRequest) {
         userId: session.userId,
         category: cleanCategory,
         title: encryptVaultField("title", cleanTitle, entryId)!,
-        username: encryptVaultField(
-          "username",
-          safeText(username, 500),
-          entryId
-        ),
+        username: encryptVaultField("username", safeText(username, 500), entryId),
         email: encryptVaultField("email", safeText(email, 500), entryId),
         password: encryptVaultField("password", cleanPassword, entryId)!,
         pin: encryptVaultField("pin", safeText(pin, 500), entryId),
@@ -91,9 +88,6 @@ export async function POST(req: NextRequest) {
 
     return privateJson({ entry }, { status: 201 });
   } catch {
-    return privateJson(
-      { error: "Terjadi kesalahan server" },
-      { status: 500 }
-    );
+    return privateJson({ error: "Terjadi kesalahan server" }, { status: 500 });
   }
 }

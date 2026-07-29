@@ -8,9 +8,7 @@ const TOKEN_AUDIENCE = "titipsandi-web";
 function getJwtSecret() {
   const value = process.env.JWT_SECRET;
   if (!value || !/^[a-f0-9]{64}$/i.test(value)) {
-    throw new Error(
-      "JWT_SECRET wajib berupa 32-byte hex (64 karakter)."
-    );
+    throw new Error("JWT_SECRET wajib berupa 32-byte hex (64 karakter).");
   }
   return new TextEncoder().encode(value);
 }

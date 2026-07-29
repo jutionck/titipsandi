@@ -7,8 +7,13 @@ export async function proxy(req: NextRequest) {
   const publicPaths = ["/login", "/register", "/emergency"];
   const isPublic = publicPaths.some((p) => pathname.startsWith(p));
   const isApi = pathname.startsWith("/api");
+  const isPublicAsset =
+    pathname === "/icon.svg" ||
+    pathname === "/manifest.json" ||
+    pathname === "/sw.js" ||
+    pathname.startsWith("/icons/");
 
-  if (isPublic || isApi || pathname === "/") {
+  if (isPublic || isApi || isPublicAsset || pathname === "/") {
     return NextResponse.next();
   }
 
@@ -26,5 +31,5 @@ export async function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  matcher: ["/((?!_next/static|_next/image).*)"],
 };

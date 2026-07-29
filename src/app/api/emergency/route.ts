@@ -1,10 +1,7 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { privateJson, requireJson } from "@/lib/api-security";
-import {
-  decryptUserEmail,
-  decryptUserName,
-} from "@/lib/user-crypto";
+import { decryptUserEmail, decryptUserName } from "@/lib/user-crypto";
 import {
   emergencyCodeHash,
   normalizeEmergencyCode,
@@ -19,16 +16,10 @@ export async function POST(req: NextRequest) {
     }
 
     const { accessCode } = await req.json();
-    const normalized =
-      typeof accessCode === "string"
-        ? normalizeEmergencyCode(accessCode)
-        : "";
+    const normalized = typeof accessCode === "string" ? normalizeEmergencyCode(accessCode) : "";
 
     if (!/^[A-F0-9]{32}$/.test(normalized)) {
-      return privateJson(
-        { error: "Kode akses tidak valid" },
-        { status: 400 }
-      );
+      return privateJson({ error: "Kode akses tidak valid" }, { status: 400 });
     }
 
     const contact = await prisma.trustedContact.findUnique({
@@ -41,10 +32,7 @@ export async function POST(req: NextRequest) {
     });
 
     if (!contact) {
-      return privateJson(
-        { error: "Kode akses tidak valid" },
-        { status: 401 }
-      );
+      return privateJson({ error: "Kode akses tidak valid" }, { status: 401 });
     }
 
     if (!contact.isActivated) {
@@ -73,9 +61,6 @@ export async function POST(req: NextRequest) {
       entries: entries.map(publicVaultEntry),
     });
   } catch {
-    return privateJson(
-      { error: "Terjadi kesalahan server" },
-      { status: 500 }
-    );
+    return privateJson({ error: "Terjadi kesalahan server" }, { status: 500 });
   }
 }
