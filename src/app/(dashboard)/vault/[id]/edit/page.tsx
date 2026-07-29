@@ -6,10 +6,17 @@ import Link from "next/link";
 import { CATEGORIES } from "@/lib/categories";
 import LogoutButton from "@/components/LogoutButton";
 import { ArrowLeft, Save, ChevronDown, Shield, Users, Plus, Info } from "lucide-react";
+import { useVaultKey } from "@/components/VaultKeyProvider";
+import {
+  decryptClientVaultPayload,
+  encryptClientVaultPayload,
+  type ClientVaultPayload,
+} from "@/lib/client-vault-crypto";
 
 export default function EditVaultEntryPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
+  const { vaultKey, userId } = useVaultKey();
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [error, setError] = useState("");
@@ -35,7 +42,13 @@ export default function EditVaultEntryPage({ params }: { params: Promise<{ id: s
           return;
         }
         const data = await res.json();
-        const e = data.entry;
+        if (!vaultKey || !userId) throw new Error("Vault sedang terkunci.");
+        const e = await decryptClientVaultPayload(
+          vaultKey,
+          userId,
+          id,
+          data.entry.encryptedPayload,
+        );
         setForm({
           category: e.category || "",
           title: e.title || "",
@@ -53,7 +66,7 @@ export default function EditVaultEntryPage({ params }: { params: Promise<{ id: s
       }
     }
     load();
-  }, [id, router]);
+  }, [id, router, userId, vaultKey]);
 
   function updateForm(field: string, value: string) {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -65,10 +78,24 @@ export default function EditVaultEntryPage({ params }: { params: Promise<{ id: s
     setLoading(true);
 
     try {
+      if (!vaultKey || !userId) {
+        throw new Error("Vault sedang terkunci.");
+      }
+      const payload: ClientVaultPayload = {
+        category: form.category,
+        title: form.title.trim(),
+        username: form.username.trim() || null,
+        email: form.email.trim() || null,
+        password: form.password,
+        pin: form.pin.trim() || null,
+        url: form.url.trim() || null,
+        notes: form.notes.trim() || null,
+      };
+      const encryptedPayload = await encryptClientVaultPayload(vaultKey, userId, id, payload);
       const res = await fetch(`/api/vault/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ encryptedPayload }),
       });
 
       const data = await res.json();
@@ -78,8 +105,8 @@ export default function EditVaultEntryPage({ params }: { params: Promise<{ id: s
       }
 
       router.push("/dashboard");
-    } catch {
-      setError("Gagal menyimpan");
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : "Gagal menyimpan");
     } finally {
       setLoading(false);
     }

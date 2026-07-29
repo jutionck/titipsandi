@@ -4,6 +4,11 @@ import { useState } from "react";
 import Link from "next/link";
 import { CATEGORIES } from "@/lib/categories";
 import { ArrowLeft, ShieldAlert, Eye, EyeOff, Copy, Check, ExternalLink } from "lucide-react";
+import {
+  decryptClientVaultPayload,
+  hashEmergencyAccessCode,
+  unlockEmergencyVaultKey,
+} from "@/lib/client-vault-crypto";
 
 interface VaultEntry {
   id: string;
@@ -30,6 +35,7 @@ export default function EmergencyPage() {
   const [data, setData] = useState<EmergencyData | null>(null);
   const [visiblePasswords, setVisiblePasswords] = useState<Set<string>>(new Set());
   const [copiedId, setCopiedId] = useState("");
+  const [pendingUntil, setPendingUntil] = useState("");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -37,10 +43,11 @@ export default function EmergencyPage() {
     setLoading(true);
 
     try {
+      const accessCodeHash = await hashEmergencyAccessCode(accessCode);
       const res = await fetch("/api/emergency", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ accessCode }),
+        body: JSON.stringify({ accessCodeHash }),
       });
 
       const result = await res.json();
@@ -49,7 +56,40 @@ export default function EmergencyPage() {
         return;
       }
 
-      setData(result);
+      if (result.state === "pending") {
+        setPendingUntil(result.availableAt);
+        setError(result.message);
+        return;
+      }
+      if (result.state !== "granted") {
+        setError("Status akses darurat tidak valid.");
+        return;
+      }
+
+      const emergencyKey = await unlockEmergencyVaultKey(
+        accessCode,
+        result.owner.id,
+        result.contact.id,
+        result.emergencyVaultKey,
+      );
+      const entries = await Promise.all(
+        result.entries.map(
+          async (entry: { id: string; encryptedPayload: unknown }): Promise<VaultEntry> => {
+            const payload = await decryptClientVaultPayload(
+              emergencyKey,
+              result.owner.id,
+              entry.id,
+              entry.encryptedPayload,
+            );
+            return { id: entry.id, ...payload };
+          },
+        ),
+      );
+      setData({
+        owner: { name: result.owner.name, email: result.owner.email },
+        contact: { name: result.contact.name, relation: result.contact.relation },
+        entries,
+      });
     } catch {
       setError("Gagal terhubung ke server");
     } finally {
@@ -107,6 +147,12 @@ export default function EmergencyPage() {
             {error && (
               <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs font-medium rounded-xl">
                 {error}
+                {pendingUntil && (
+                  <p className="mt-1">
+                    Akses otomatis tersedia setelah {new Date(pendingUntil).toLocaleString("id-ID")}
+                    .
+                  </p>
+                )}
               </div>
             )}
 

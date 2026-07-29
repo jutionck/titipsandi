@@ -8,16 +8,20 @@ datasource db {
 }
 
 model User {
-  id              String    @id @default(uuid())
-  name            String
-  email           String
-  emailHash       String    @unique
-  emailHashV2     String?   @unique
-  passwordHash    String
-  emailVerifiedAt DateTime?
-  sessionVersion  Int       @default(0)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id                       String    @id @default(uuid())
+  name                     String
+  email                    String
+  emailHash                String    @unique
+  emailHashV2              String?   @unique
+  passwordHash             String
+  emailVerifiedAt          DateTime?
+  sessionVersion           Int       @default(0)
+  vaultKeyEnvelope         Json?
+  vaultCryptoVersion       Int?
+  recoveryVaultKeyEnvelope Json?
+  recoveryKeyVersion       Int?
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
 
   entries                 VaultEntry[]
   trustedContacts         TrustedContact[]
@@ -28,41 +32,51 @@ model User {
 }
 
 model VaultEntry {
-  id        String   @id @default(uuid())
-  userId    String
-  category  String
-  title     String
-  username  String?
-  email     String?
-  password  String
-  pin       String?
-  url       String?
-  notes     String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                      String   @id @default(uuid())
+  userId                  String
+  clientEncryptedPayload  Json
+  clientEncryptionVersion Int
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
-  @@index([category])
 }
 
 model TrustedContact {
-  id             String    @id @default(uuid())
-  userId         String
-  name           String
-  email          String
-  phone          String?
-  relation       String
-  accessCodeHash String    @unique
-  isActivated    Boolean   @default(false)
-  activatedAt    DateTime?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  id                        String    @id @default(uuid())
+  userId                    String
+  name                      String
+  email                     String
+  phone                     String?
+  relation                  String
+  accessCodeHash            String    @unique
+  emergencyVaultKeyEnvelope Json?
+  emergencyCryptoVersion    Int?
+  accessWaitDays            Int       @default(7)
+  isActivated               Boolean   @default(false)
+  activatedAt               DateTime?
+  createdAt                 DateTime  @default(now())
+  updatedAt                 DateTime  @updatedAt
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user           User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessRequests EmergencyAccessRequest[]
 
   @@index([userId])
+}
+
+model EmergencyAccessRequest {
+  id               String    @id @default(uuid())
+  trustedContactId String    @unique
+  status           String    @default("PENDING")
+  requestedAt      DateTime  @default(now())
+  availableAt      DateTime
+  resolvedAt       DateTime?
+
+  trustedContact TrustedContact @relation(fields: [trustedContactId], references: [id], onDelete: Cascade)
+
+  @@index([availableAt])
 }
 
 model Passkey {

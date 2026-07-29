@@ -3,6 +3,11 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Eye, EyeOff, Lock, Shield } from "lucide-react";
+import {
+  deriveAuthenticationSecret,
+  recoverAndRewrapVaultKey,
+  type ProtectedVaultKey,
+} from "@/lib/client-vault-crypto";
 
 export default function PasswordResetForm() {
   const tokenRef = useRef("");
@@ -13,14 +18,58 @@ export default function PasswordResetForm() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [recoveryKey, setRecoveryKey] = useState("");
+  const [recoveryState, setRecoveryState] = useState<{
+    userId: string;
+    email: string;
+    recoveryVaultKey: ProtectedVaultKey;
+  } | null>(null);
+  const [loadingRecovery, setLoadingRecovery] = useState(true);
   const passwordIsLongEnough = password.length >= 12;
   const passwordsMatch = confirmation.length > 0 && password === confirmation;
-  const canSubmit = passwordIsLongEnough && passwordsMatch && !loading;
+  const canSubmit =
+    passwordIsLongEnough &&
+    passwordsMatch &&
+    Boolean(recoveryKey.trim()) &&
+    Boolean(recoveryState) &&
+    !loading;
 
   useEffect(() => {
     const fragment = new URLSearchParams(window.location.hash.slice(1));
     tokenRef.current = fragment.get("token") || "";
     window.history.replaceState(null, "", "/recover");
+
+    async function loadRecoveryEnvelope() {
+      if (!tokenRef.current) {
+        setError("Tautan pemulihan tidak valid.");
+        setLoadingRecovery(false);
+        return;
+      }
+      try {
+        const response = await fetch("/api/auth/recovery/key", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token: tokenRef.current }),
+        });
+        const result = await response.json();
+        if (!response.ok || typeof result.userId !== "string") {
+          throw new Error(result.error || "Tautan pemulihan tidak valid.");
+        }
+        setRecoveryState({
+          userId: result.userId,
+          email: result.email,
+          recoveryVaultKey: result.recoveryVaultKey,
+        });
+      } catch (caughtError) {
+        setError(
+          caughtError instanceof Error ? caughtError.message : "Tautan pemulihan tidak valid.",
+        );
+      } finally {
+        setLoadingRecovery(false);
+      }
+    }
+
+    void loadRecoveryEnvelope();
   }, []);
 
   async function handleSubmit(event: FormEvent) {
@@ -43,10 +92,24 @@ export default function PasswordResetForm() {
 
     setLoading(true);
     try {
+      if (!recoveryState) {
+        throw new Error("Data pemulihan tidak tersedia.");
+      }
+      const { protectedVaultKey } = await recoverAndRewrapVaultKey(
+        recoveryKey,
+        password,
+        recoveryState.userId,
+        recoveryState.recoveryVaultKey,
+      );
+      const authenticationSecret = await deriveAuthenticationSecret(password, recoveryState.email);
       const response = await fetch("/api/auth/recovery/reset", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token: tokenRef.current, password }),
+        body: JSON.stringify({
+          token: tokenRef.current,
+          authenticationSecret,
+          protectedVaultKey,
+        }),
       });
       const result = await response.json();
       if (!response.ok) {
@@ -55,9 +118,10 @@ export default function PasswordResetForm() {
       }
       setPassword("");
       setConfirmation("");
+      setRecoveryKey("");
       setMessage(result.message);
     } catch {
-      setError("Gagal terhubung ke server.");
+      setError("Recovery key salah atau data pemulihan tidak valid.");
     } finally {
       setLoading(false);
     }
@@ -102,6 +166,27 @@ export default function PasswordResetForm() {
                 {error}
               </div>
             )}
+
+            <div className="space-y-1">
+              <label htmlFor="recovery-key" className="text-xs font-semibold text-gray-600">
+                Recovery key
+              </label>
+              <textarea
+                id="recovery-key"
+                value={recoveryKey}
+                onChange={(event) => setRecoveryKey(event.target.value)}
+                required
+                disabled={loadingRecovery || !recoveryState}
+                rows={2}
+                autoComplete="off"
+                spellCheck={false}
+                placeholder={loadingRecovery ? "Memvalidasi tautan…" : "Tempel recovery key Anda"}
+                className="w-full resize-none rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 font-mono text-xs text-gray-900 outline-none focus:border-transparent focus:ring-2 focus:ring-gray-900 disabled:bg-gray-100"
+              />
+              <p className="text-xs leading-relaxed text-gray-500">
+                Recovery key diperlukan agar password baru tetap dapat membuka isi vault lama.
+              </p>
+            </div>
 
             <div className="space-y-1">
               <label htmlFor="new-password" className="text-xs font-semibold text-gray-600">

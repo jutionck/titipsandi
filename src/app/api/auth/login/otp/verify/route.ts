@@ -50,7 +50,13 @@ export async function POST(req: NextRequest) {
       where: { tokenHash },
       include: {
         user: {
-          select: { id: true, sessionVersion: true, emailVerifiedAt: true },
+          select: {
+            id: true,
+            sessionVersion: true,
+            emailVerifiedAt: true,
+            vaultKeyEnvelope: true,
+            vaultCryptoVersion: true,
+          },
         },
       },
     });
@@ -106,7 +112,13 @@ export async function POST(req: NextRequest) {
     });
     await clearRateLimits(policies);
 
-    const response = privateJson({ success: true, message: "Login berhasil." });
+    const response = privateJson({
+      success: true,
+      message: "Login berhasil.",
+      userId: challenge.user.id,
+      protectedVaultKey: challenge.user.vaultKeyEnvelope,
+      vaultCryptoVersion: challenge.user.vaultCryptoVersion,
+    });
     setSessionCookie(response, sessionToken);
     clearLoginOtpCookie(response);
     return response;

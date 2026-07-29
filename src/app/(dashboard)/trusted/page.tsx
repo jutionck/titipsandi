@@ -20,6 +20,12 @@ import {
   Info,
   ChevronDown,
 } from "lucide-react";
+import { useVaultKey } from "@/components/VaultKeyProvider";
+import {
+  createEmergencyAccessCode,
+  createEmergencyVaultKey,
+  hashEmergencyAccessCode,
+} from "@/lib/client-vault-crypto";
 
 interface TrustedContact {
   id: string;
@@ -30,10 +36,16 @@ interface TrustedContact {
   isActivated: boolean;
   activatedAt: string | null;
   createdAt: string;
+  accessRequest: {
+    status: string;
+    requestedAt: string;
+    availableAt: string;
+  } | null;
 }
 
 export default function TrustedContactsPage() {
   const router = useRouter();
+  const { vaultKey, userId } = useVaultKey();
   const [contacts, setContacts] = useState<TrustedContact[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -86,10 +98,17 @@ export default function TrustedContactsPage() {
     setSaving(true);
 
     try {
+      if (!vaultKey || !userId) throw new Error("Vault sedang terkunci.");
+      const id = crypto.randomUUID();
+      const code = createEmergencyAccessCode();
+      const [accessCodeHash, emergencyVaultKey] = await Promise.all([
+        hashEmergencyAccessCode(code),
+        createEmergencyVaultKey(vaultKey, code, userId, id),
+      ]);
       const res = await fetch("/api/trusted", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, id, accessCodeHash, emergencyVaultKey }),
       });
 
       const data = await res.json();
@@ -98,13 +117,13 @@ export default function TrustedContactsPage() {
         return;
       }
 
-      setEmergencyCode(data.emergencyCode);
+      setEmergencyCode(code);
       setInvitationRecipient(data.invitationRecipient || data.contact.email);
       setForm({ name: "", email: "", phone: "", relation: "" });
       setShowForm(false);
       fetchContacts();
-    } catch {
-      setError("Gagal menyimpan");
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : "Gagal menyimpan");
     } finally {
       setSaving(false);
     }
@@ -114,6 +133,21 @@ export default function TrustedContactsPage() {
     if (!confirm("Yakin ingin menghapus kontak darurat ini?")) return;
     await fetch(`/api/trusted/${id}`, { method: "DELETE" });
     fetchContacts();
+  }
+
+  async function resolveRequest(id: string, action: "approve" | "reject") {
+    setError("");
+    const response = await fetch(`/api/trusted/${id}/request`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action }),
+    });
+    const result = await response.json();
+    if (!response.ok) {
+      setError(result.error || "Permintaan belum dapat diproses.");
+      return;
+    }
+    await fetchContacts();
   }
 
   async function copyCode(code: string, id: string) {
@@ -403,6 +437,34 @@ export default function TrustedContactsPage() {
                   <div className="inline-flex items-center gap-1.5 text-[10px] text-green-600 bg-green-50 py-1.5 px-3 rounded-lg border border-green-100 font-medium w-fit">
                     <ShieldCheck className="w-3.5 h-3.5" />
                     <span>Aktif & Menunggu</span>
+                  </div>
+                )}
+
+                {contact.accessRequest?.status === "PENDING" && (
+                  <div className="space-y-3 rounded-xl border border-red-200 bg-red-50 p-3">
+                    <p className="text-xs font-bold text-red-800">
+                      Kontak ini meminta akses ke vault Anda.
+                    </p>
+                    <p className="text-[11px] text-red-700">
+                      Jika tidak direspons, akses tersedia otomatis pada{" "}
+                      {new Date(contact.accessRequest.availableAt).toLocaleString("id-ID")}.
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => resolveRequest(contact.id, "approve")}
+                        className="flex-1 rounded-lg bg-red-600 py-2 text-xs font-bold text-white"
+                      >
+                        Setujui
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => resolveRequest(contact.id, "reject")}
+                        className="flex-1 rounded-lg border border-red-200 bg-white py-2 text-xs font-bold text-red-700"
+                      >
+                        Tolak
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Shield, Lock, Mail, User, ArrowLeft, Eye, EyeOff } from "lucide-react";
+import { createProtectedVaultKey, deriveAuthenticationSecret } from "@/lib/client-vault-crypto";
 
 export default function RegisterPage() {
   const [name, setName] = useState("");
@@ -15,6 +16,8 @@ export default function RegisterPage() {
   const [resending, setResending] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [recoveryKey, setRecoveryKey] = useState("");
+  const [recoveryCopied, setRecoveryCopied] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -28,10 +31,22 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
+      const userId = crypto.randomUUID();
+      const [created, authenticationSecret] = await Promise.all([
+        createProtectedVaultKey(password, userId),
+        deriveAuthenticationSecret(password, email),
+      ]);
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password }),
+        body: JSON.stringify({
+          name,
+          email,
+          authenticationSecret,
+          userId,
+          protectedVaultKey: created.protectedVaultKey,
+          recoveryVaultKey: created.recoveryVaultKey,
+        }),
       });
 
       const data = await res.json();
@@ -42,6 +57,7 @@ export default function RegisterPage() {
 
       setPassword("");
       setConfirmPassword("");
+      setRecoveryKey(created.recoveryKey);
       setSuccess(data.message);
     } catch {
       setError("Gagal terhubung ke server");
@@ -93,6 +109,24 @@ export default function RegisterPage() {
           {success && (
             <div className="space-y-3 rounded-xl border border-green-200 bg-green-50 p-4 text-xs font-medium text-green-800">
               <p>{success}</p>
+              {recoveryKey && (
+                <div className="space-y-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-amber-900">
+                  <p className="font-bold">Simpan recovery key sebelum meninggalkan halaman ini.</p>
+                  <code className="block break-all rounded-lg bg-white p-2 text-[11px] font-bold text-gray-900">
+                    {recoveryKey}
+                  </code>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      await navigator.clipboard.writeText(recoveryKey);
+                      setRecoveryCopied(true);
+                    }}
+                    className="font-bold underline"
+                  >
+                    {recoveryCopied ? "Sudah tersalin" : "Salin recovery key"}
+                  </button>
+                </div>
+              )}
               <button
                 type="button"
                 onClick={resendVerification}

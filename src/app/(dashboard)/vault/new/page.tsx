@@ -6,9 +6,12 @@ import Link from "next/link";
 import { CATEGORIES } from "@/lib/categories";
 import LogoutButton from "@/components/LogoutButton";
 import { ArrowLeft, Save, ChevronDown, Shield, Users, Plus, Info } from "lucide-react";
+import { useVaultKey } from "@/components/VaultKeyProvider";
+import { encryptClientVaultPayload, type ClientVaultPayload } from "@/lib/client-vault-crypto";
 
 export default function NewVaultEntryPage() {
   const router = useRouter();
+  const { vaultKey, userId } = useVaultKey();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -34,10 +37,25 @@ export default function NewVaultEntryPage() {
     setLoading(true);
 
     try {
+      if (!vaultKey || !userId) {
+        throw new Error("Vault sedang terkunci.");
+      }
+      const id = crypto.randomUUID();
+      const payload: ClientVaultPayload = {
+        category: form.category,
+        title: form.title.trim(),
+        username: form.username.trim() || null,
+        email: form.email.trim() || null,
+        password: form.password,
+        pin: form.pin.trim() || null,
+        url: form.url.trim() || null,
+        notes: form.notes.trim() || null,
+      };
+      const encryptedPayload = await encryptClientVaultPayload(vaultKey, userId, id, payload);
       const res = await fetch("/api/vault", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ id, encryptedPayload }),
       });
 
       const data = await res.json();
@@ -47,8 +65,8 @@ export default function NewVaultEntryPage() {
       }
 
       router.push("/dashboard");
-    } catch {
-      setError("Gagal menyimpan");
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : "Gagal menyimpan");
     } finally {
       setLoading(false);
     }

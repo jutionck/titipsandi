@@ -11,6 +11,7 @@ import {
 import { prisma } from "@/lib/prisma";
 import { clearRateLimits, enforceRateLimits } from "@/lib/rate-limit";
 import { decryptUserEmail } from "@/lib/user-crypto";
+import { validateProtectedVaultKey } from "@/lib/client-vault-crypto";
 
 const INVALID_LINK = "Tautan pemulihan tidak valid atau sudah kedaluwarsa.";
 
@@ -19,13 +20,19 @@ export async function POST(req: NextRequest) {
     const parsed = await readBoundedJson(req, 8 * 1024);
     if (!parsed.ok) return parsed.response;
 
-    const { token, password } = parsed.value;
+    const { token, authenticationSecret, protectedVaultKey } = parsed.value;
     if (
       !isPasswordResetToken(token) ||
-      typeof password !== "string" ||
-      password.length < 12 ||
-      Buffer.byteLength(password, "utf8") > 72
+      typeof authenticationSecret !== "string" ||
+      !/^[A-Za-z0-9_-]{43}$/u.test(authenticationSecret)
     ) {
+      return privateJson({ error: INVALID_LINK }, { status: 400 });
+    }
+
+    let vaultKeyEnvelope;
+    try {
+      vaultKeyEnvelope = validateProtectedVaultKey(protectedVaultKey, "password");
+    } catch {
       return privateJson({ error: INVALID_LINK }, { status: 400 });
     }
 
@@ -61,7 +68,7 @@ export async function POST(req: NextRequest) {
       return privateJson({ error: INVALID_LINK }, { status: 400 });
     }
 
-    const passwordHash = await bcrypt.hash(password, 12);
+    const passwordHash = await bcrypt.hash(authenticationSecret, 12);
     const usedAt = new Date();
     await prisma.$transaction(async (tx) => {
       const consumed = await tx.passwordResetToken.updateMany({
@@ -81,6 +88,7 @@ export async function POST(req: NextRequest) {
         where: { id: candidate.userId },
         data: {
           passwordHash,
+          vaultKeyEnvelope,
           sessionVersion: { increment: 1 },
         },
       });

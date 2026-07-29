@@ -1,11 +1,16 @@
 import { NextRequest } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { getSession } from "@/lib/auth";
-import { privateJson, readBoundedJson, safeText } from "@/lib/api-security";
-import { encryptVaultField, publicVaultEntry } from "@/lib/vault-crypto";
-import { isCategoryValue } from "@/lib/categories";
 
-export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+import { getSession } from "@/lib/auth";
+import { privateJson, readBoundedJson } from "@/lib/api-security";
+import {
+  CLIENT_VAULT_CRYPTO_VERSION,
+  validateClientEncryptedVaultPayload,
+} from "@/lib/client-vault-crypto";
+import { prisma } from "@/lib/prisma";
+
+type RouteContext = { params: Promise<{ id: string }> };
+
+export async function GET(_req: NextRequest, { params }: RouteContext) {
   const session = await getSession();
   if (!session) {
     return privateJson({ error: "Unauthorized" }, { status: 401 });
@@ -13,95 +18,78 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 
   const { id } = await params;
   const entry = await prisma.vaultEntry.findFirst({
-    where: { id, userId: session.userId },
+    where: {
+      id,
+      userId: session.userId,
+      clientEncryptionVersion: CLIENT_VAULT_CRYPTO_VERSION,
+    },
+    select: {
+      id: true,
+      clientEncryptedPayload: true,
+      clientEncryptionVersion: true,
+      createdAt: true,
+      updatedAt: true,
+    },
   });
-
   if (!entry) {
     return privateJson({ error: "Tidak ditemukan" }, { status: 404 });
   }
 
-  return privateJson({ entry: publicVaultEntry(entry) });
+  return privateJson({
+    entry: {
+      id: entry.id,
+      encryptedPayload: entry.clientEncryptedPayload,
+      encryptionVersion: entry.clientEncryptionVersion,
+      createdAt: entry.createdAt,
+      updatedAt: entry.updatedAt,
+    },
+  });
 }
 
-export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function PUT(req: NextRequest, { params }: RouteContext) {
   const session = await getSession();
   if (!session) {
     return privateJson({ error: "Unauthorized" }, { status: 401 });
   }
 
   const { id } = await params;
-  const existing = await prisma.vaultEntry.findFirst({
-    where: { id, userId: session.userId },
-  });
+  const parsed = await readBoundedJson(req, 128 * 1024);
+  if (!parsed.ok) return parsed.response;
 
-  if (!existing) {
-    return privateJson({ error: "Tidak ditemukan" }, { status: 404 });
-  }
-
+  let envelope;
   try {
-    const parsed = await readBoundedJson(req, 128 * 1024);
-    if (!parsed.ok) return parsed.response;
-    const body = parsed.value;
-    const { category, title, username, email, password, pin, url, notes } = body;
-    const cleanCategory = category === undefined ? undefined : safeText(category, 40);
-    if (cleanCategory !== undefined && !isCategoryValue(cleanCategory)) {
-      return privateJson({ error: "Kategori tidak valid" }, { status: 400 });
-    }
-    if (typeof password === "string" && password.length > 10_000) {
-      return privateJson({ error: "Password melebihi batas 10.000 karakter" }, { status: 400 });
-    }
-
-    const entry = await prisma.vaultEntry.update({
-      where: { id },
-      data: {
-        category: cleanCategory ?? existing.category,
-        title:
-          title !== undefined
-            ? (encryptVaultField("title", safeText(title, 200), id) ?? existing.title)
-            : existing.title,
-        username:
-          username !== undefined
-            ? encryptVaultField("username", safeText(username, 500), id)
-            : existing.username,
-        email:
-          email !== undefined
-            ? encryptVaultField("email", safeText(email, 500), id)
-            : existing.email,
-        password:
-          typeof password === "string" && password
-            ? encryptVaultField("password", password, id)!
-            : existing.password,
-        pin: pin !== undefined ? encryptVaultField("pin", safeText(pin, 500), id) : existing.pin,
-        url: url !== undefined ? encryptVaultField("url", safeText(url, 2_000), id) : existing.url,
-        notes:
-          notes !== undefined
-            ? encryptVaultField("notes", safeText(notes, 10_000), id)
-            : existing.notes,
-      },
-      select: { id: true, updatedAt: true },
-    });
-
-    return privateJson({ entry });
+    envelope = validateClientEncryptedVaultPayload(parsed.value.encryptedPayload);
   } catch {
-    return privateJson({ error: "Terjadi kesalahan server" }, { status: 500 });
+    return privateJson({ error: "Ciphertext entry tidak valid." }, { status: 400 });
   }
+
+  const updated = await prisma.vaultEntry.updateMany({
+    where: { id, userId: session.userId },
+    data: {
+      clientEncryptedPayload: envelope,
+      clientEncryptionVersion: CLIENT_VAULT_CRYPTO_VERSION,
+    },
+  });
+  if (updated.count !== 1) {
+    return privateJson({ error: "Tidak ditemukan" }, { status: 404 });
+  }
+
+  return privateJson({ entry: { id } });
 }
 
-export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(_req: NextRequest, { params }: RouteContext) {
   const session = await getSession();
   if (!session) {
     return privateJson({ error: "Unauthorized" }, { status: 401 });
   }
 
   const { id } = await params;
-  const existing = await prisma.vaultEntry.findFirst({
+  const deleted = await prisma.vaultEntry.deleteMany({
     where: { id, userId: session.userId },
   });
-
-  if (!existing) {
+  if (deleted.count !== 1) {
     return privateJson({ error: "Tidak ditemukan" }, { status: 404 });
   }
 
-  await prisma.vaultEntry.delete({ where: { id } });
   return privateJson({ success: true });
 }

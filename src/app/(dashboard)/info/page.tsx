@@ -107,9 +107,8 @@ export default function InfoPage() {
                     <span>Enkripsi AES-256-GCM</span>
                   </div>
                   <p className="text-gray-500 leading-relaxed">
-                    Field sensitif dienkripsi di server aplikasi menggunakan AES-256-GCM sebelum
-                    disimpan. Database saja tidak cukup untuk membacanya, tetapi server yang
-                    memegang kunci tetap dapat melakukan dekripsi.
+                    Isi vault dienkripsi di browser menggunakan AES-256-GCM. Server hanya menyimpan
+                    ciphertext dan kunci vault yang telah dibungkus.
                   </p>
                 </div>
 
@@ -119,9 +118,9 @@ export default function InfoPage() {
                     <span>Akses Darurat Terenkripsi</span>
                   </div>
                   <p className="text-gray-500 leading-relaxed">
-                    Akses darurat menggunakan kode acak 128-bit yang hanya ditampilkan sekali.
-                    Server menyimpan hash kode; siapa pun yang memegang kode tetap dapat membuka
-                    vault terkait.
+                    Kode darurat 256-bit dibuat di browser. Akses diberikan setelah persetujuan
+                    pemilik atau masa tunggu 7 hari, lalu dekripsi tetap berlangsung di perangkat
+                    kontak.
                   </p>
                 </div>
               </div>

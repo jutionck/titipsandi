@@ -7,25 +7,22 @@ bersifat open source dan dapat di-self-host.
 
 > [!IMPORTANT]
 > Belum ada perangkat lunak yang dapat menjamin kerahasiaan secara absolut.
-> TitipSandi mengenkripsi data sensitif di server sebelum menyimpannya, tetapi
-> saat ini **bukan zero-knowledge vault**: proses aplikasi yang memiliki
-> `ENCRYPTION_KEY` dapat mendekripsi data. Jangan gunakan untuk data kritis
-> sebelum melakukan security review independen, pengujian penetrasi, backup,
-> monitoring, dan prosedur rotasi kunci.
+> Isi vault dienkripsi di browser sebelum dikirim ke server. Arsitektur ini belum
+> memperoleh audit keamanan independen; jangan menganggapnya menjamin kerahasiaan
+> absolut sebelum pengujian penetrasi, backup, monitoring, dan review kriptografi.
 
 ## Model keamanan
 
-- Password login di-hash dengan bcrypt dan tidak dapat dikembalikan ke bentuk
-  asli.
+- Browser menurunkan authentication secret terpisah; password asli tidak dikirim
+  ke server. Authentication secret tetap di-hash dengan bcrypt.
 - Isi vault, termasuk judul, username, email akun, password, PIN, URL, dan
   catatan, dienkripsi dengan AES-256-GCM sebelum masuk ke PostgreSQL.
 - Nama dan email pengguna serta data pribadi kontak terpercaya juga dienkripsi.
   Pencarian email login menggunakan blind index berbasis HMAC.
-- Format ciphertext v2 memakai HKDF-SHA-256 untuk memisahkan subkey enkripsi dan
-  blind index. Ciphertext v1 tetap dapat dibaca selama rollout, dan key lama
-  dapat dipasang sementara melalui keyring untuk rotasi tanpa downtime.
-- Kode darurat menggunakan random 128-bit, hanya ditampilkan sekali, dan hanya
-  hash SHA-256-nya yang disimpan.
+- Enkripsi metadata akun di server memakai format ciphertext v2 dan subkey
+  HKDF-SHA-256 yang terpisah dari blind index.
+- Kode darurat 256-bit dibuat di browser dan hanya hash SHA-256-nya yang
+  disimpan. Akses memerlukan persetujuan atau melewati masa tunggu.
 - Cookie sesi bersifat `HttpOnly`, `SameSite=Strict`, dan `Secure` di production.
 - Pemulihan password memakai tautan acak 256-bit yang berlaku 10 menit, hanya
   dapat digunakan sekali, dan disimpan sebagai hash. Reset password mencabut
@@ -96,7 +93,8 @@ openssl rand -hex 32
 ```
 
 Jangan menggunakan nilai yang sama untuk `JWT_SECRET` dan `ENCRYPTION_KEY`.
-Kehilangan `ENCRYPTION_KEY` berarti data vault tidak dapat dipulihkan.
+Kehilangan `ENCRYPTION_KEY` membuat metadata akun dan kontak tidak dapat dibaca.
+Isi vault bergantung pada Master Password atau recovery key pengguna.
 
 ## Instalasi dan migrasi
 
@@ -154,19 +152,18 @@ endpoint autentikasi. Build Vercel otomatis menjalankan `prisma generate`.
 
 ## Rollout key separation dan rotasi
 
-Format baru sengaja tidak aktif otomatis agar deployment dapat di-rollback
-sebelum ciphertext v2 mulai ditulis.
+Bagian ini hanya berlaku untuk enkripsi metadata akun/kontak di server, bukan
+untuk isi vault yang dienkripsi di browser.
 
 1. Deploy migration dan kode dengan `ENCRYPTION_WRITE_VERSION=v1`.
-2. Verifikasi login Master Password beserta OTP email, passkey, pembacaan vault,
-   dan emergency access. Login berhasil akan mengisi blind index v2 secara
-   bertahap.
+2. Verifikasi login Master Password beserta OTP email, passkey, dan blind index
+   email.
 3. Setelah deployment stabil, ubah `ENCRYPTION_WRITE_VERSION=v2`. Record baru
    dan record yang diedit mulai memakai subkey HKDF dan format ciphertext v2.
 4. Untuk mengganti master key, pindahkan nilai lama ke
    `ENCRYPTION_KEY_PREVIOUS`, tetapkan key baru sebagai `ENCRYPTION_KEY`, lalu
    deploy kedua nilai secara bersamaan.
-5. Jangan menghapus key previous sampai seluruh ciphertext v1/v2 dan blind index
+5. Jangan menghapus key previous sampai seluruh metadata v1/v2 dan blind index
    yang bergantung pada key tersebut sudah dimigrasikan dan diverifikasi.
 
 `ENCRYPTION_KEY_PREVIOUS` menerima maksimal delapan key hex yang dipisahkan koma.
@@ -235,17 +232,16 @@ Kerentanan keamanan harus dilaporkan secara privat sesuai
 
 ## Batasan penting
 
-- Enkripsi berlangsung di server, bukan di browser.
-- Akses darurat adalah bearer capability: siapa pun yang memiliki kode dapat
-  membuka vault terkait.
-- Belum tersedia recovery key, rotasi kunci otomatis, audit
-  log tahan-rusak, atau security audit independen.
+- Enkripsi vault berlangsung di browser. Metadata akun dan kontak yang diperlukan
+  untuk pengiriman email masih dilindungi menggunakan key aplikasi server.
+- Recovery key harus disimpan pengguna; kehilangan master password dan recovery
+  key membuat vault tidak dapat dipulihkan.
+- Belum tersedia audit log tahan-rusak atau security audit independen.
 - Rate limiter aplikasi mengurangi brute force, tetapi bukan perlindungan DDoS.
   Untuk deployment publik, tetap aktifkan WAF dan pembatasan traffic di depan
   endpoint `/api/auth/*` dan `/api/emergency`. Pastikan reverse proxy mengganti,
   bukan meneruskan mentah, header `X-Forwarded-For` dari client.
-- Jangan menyatakan aplikasi “dijamin aman”, “zero knowledge”, atau
-  “enkripsi lokal” sebelum arsitekturnya benar-benar mendukung klaim tersebut.
+- Jangan menyatakan aplikasi “dijamin aman” sebelum audit independen.
 
 ## Lisensi
 

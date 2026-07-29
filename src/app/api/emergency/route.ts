@@ -1,23 +1,19 @@
 import { NextRequest } from "next/server";
-import { prisma } from "@/lib/prisma";
+
 import { privateJson, readBoundedJson, requestClientIp } from "@/lib/api-security";
+import { CLIENT_VAULT_CRYPTO_VERSION } from "@/lib/client-vault-crypto";
+import { prisma } from "@/lib/prisma";
 import { enforceRateLimits } from "@/lib/rate-limit";
+import { publicContact } from "@/lib/trusted-contact-crypto";
 import { decryptUserEmail, decryptUserName } from "@/lib/user-crypto";
-import {
-  emergencyCodeHash,
-  normalizeEmergencyCode,
-  publicContact,
-} from "@/lib/trusted-contact-crypto";
-import { publicVaultEntry } from "@/lib/vault-crypto";
 
 export async function POST(req: NextRequest) {
   try {
     const parsed = await readBoundedJson(req, 2 * 1024);
     if (!parsed.ok) return parsed.response;
-    const { accessCode } = parsed.value;
-    const normalized = typeof accessCode === "string" ? normalizeEmergencyCode(accessCode) : "";
+    const { accessCodeHash } = parsed.value;
 
-    if (!/^[A-F0-9]{32}$/.test(normalized)) {
+    if (typeof accessCodeHash !== "string" || !/^[a-f0-9]{64}$/u.test(accessCodeHash)) {
       return privateJson({ error: "Kode akses tidak valid" }, { status: 400 });
     }
 
@@ -30,7 +26,7 @@ export async function POST(req: NextRequest) {
       },
       {
         scope: "emergency-code",
-        identifier: normalized,
+        identifier: accessCodeHash,
         limit: 10,
         windowMs: 15 * 60 * 1000,
       },
@@ -38,42 +34,87 @@ export async function POST(req: NextRequest) {
     if (rateLimitResponse) return rateLimitResponse;
 
     const contact = await prisma.trustedContact.findUnique({
-      where: { accessCodeHash: emergencyCodeHash(normalized) },
+      where: { accessCodeHash },
       include: {
-        user: {
-          select: { name: true, email: true },
-        },
+        accessRequests: true,
+        user: { select: { name: true, email: true } },
       },
     });
-
-    if (!contact) {
+    if (!contact?.emergencyVaultKeyEnvelope) {
       return privateJson({ error: "Kode akses tidak valid" }, { status: 401 });
     }
 
-    if (!contact.isActivated) {
+    const now = new Date();
+    let request = contact.accessRequests[0];
+    if (!request) {
+      const availableAt = new Date(now.getTime() + contact.accessWaitDays * 24 * 60 * 60 * 1000);
+      request = await prisma.emergencyAccessRequest.create({
+        data: {
+          trustedContactId: contact.id,
+          availableAt,
+        },
+      });
       await prisma.trustedContact.update({
         where: { id: contact.id },
-        data: { isActivated: true, activatedAt: new Date() },
+        data: { isActivated: true, activatedAt: contact.activatedAt ?? now },
+      });
+    }
+
+    if (request.status === "REJECTED") {
+      return privateJson(
+        { state: "rejected", error: "Permintaan akses ditolak oleh pemilik vault." },
+        { status: 403 },
+      );
+    }
+
+    const granted = request.status === "APPROVED" || request.availableAt <= now;
+    if (!granted) {
+      return privateJson({
+        state: "pending",
+        availableAt: request.availableAt,
+        message: "Permintaan tercatat dan sedang menunggu persetujuan atau masa tunggu.",
+      });
+    }
+
+    if (request.status === "PENDING") {
+      await prisma.emergencyAccessRequest.update({
+        where: { id: request.id },
+        data: { status: "APPROVED", resolvedAt: now },
       });
     }
 
     const entries = await prisma.vaultEntry.findMany({
-      where: { userId: contact.userId },
-      orderBy: [{ category: "asc" }, { title: "asc" }],
+      where: {
+        userId: contact.userId,
+        clientEncryptionVersion: CLIENT_VAULT_CRYPTO_VERSION,
+      },
+      select: {
+        id: true,
+        clientEncryptedPayload: true,
+        clientEncryptionVersion: true,
+      },
+      orderBy: { updatedAt: "desc" },
     });
-
     const safeContact = publicContact(contact);
 
     return privateJson({
+      state: "granted",
       owner: {
+        id: contact.userId,
         name: decryptUserName(contact.user.name, contact.userId),
         email: decryptUserEmail(contact.user.email, contact.userId),
       },
       contact: {
+        id: contact.id,
         name: safeContact.name,
         relation: safeContact.relation,
       },
-      entries: entries.map(publicVaultEntry),
+      emergencyVaultKey: contact.emergencyVaultKeyEnvelope,
+      entries: entries.map((entry) => ({
+        id: entry.id,
+        encryptedPayload: entry.clientEncryptedPayload,
+        encryptionVersion: entry.clientEncryptionVersion,
+      })),
     });
   } catch {
     return privateJson({ error: "Terjadi kesalahan server" }, { status: 500 });

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { LogOut, X } from "lucide-react";
+import { useVaultKey } from "@/components/VaultKeyProvider";
 
 interface LogoutButtonProps {
   className?: string;
@@ -17,6 +18,7 @@ export default function LogoutButton({
   label = "Keluar",
 }: LogoutButtonProps) {
   const router = useRouter();
+  const { lockVault } = useVaultKey();
   const cancelButtonRef = useRef<HTMLButtonElement>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -57,6 +59,7 @@ export default function LogoutButton({
         throw new Error("Logout gagal");
       }
 
+      lockVault();
       router.replace("/login");
       router.refresh();
     } catch {

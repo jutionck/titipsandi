@@ -5,9 +5,12 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { startAuthentication } from "@simplewebauthn/browser";
 import { Shield, Lock, Mail, ArrowLeft, Eye, EyeOff, Fingerprint, KeyRound } from "lucide-react";
+import { deriveAuthenticationSecret, unlockVaultKey } from "@/lib/client-vault-crypto";
+import { useVaultKey } from "@/components/VaultKeyProvider";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { setVaultKey } = useVaultKey();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [otpDigits, setOtpDigits] = useState<string[]>(() => Array(6).fill(""));
@@ -30,10 +33,11 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
+      const authenticationSecret = await deriveAuthenticationSecret(password, email);
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, authenticationSecret }),
       });
 
       const data = await res.json();
@@ -46,7 +50,6 @@ export default function LoginPage() {
       if (data.requiresOtp) {
         setStep("otp");
         setMaskedEmail(data.maskedEmail || "email Anda");
-        setPassword("");
         setError("");
         return;
       }
@@ -75,6 +78,20 @@ export default function LoginPage() {
         return;
       }
 
+      if (typeof result.userId !== "string") {
+        setError("Identitas vault tidak valid.");
+        return;
+      }
+
+      if (result.protectedVaultKey) {
+        const unlockedKey = await unlockVaultKey(password, result.userId, result.protectedVaultKey);
+        setVaultKey(unlockedKey, result.userId);
+      } else {
+        setError("Akun legacy tidak memiliki kunci vault dan tidak dapat digunakan pada cutover.");
+        return;
+      }
+
+      setPassword("");
       router.replace("/dashboard");
       router.refresh();
     } catch {

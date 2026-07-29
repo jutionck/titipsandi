@@ -1,18 +1,15 @@
 import { after, NextRequest } from "next/server";
-import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { privateJson, readBoundedJson, safeText } from "@/lib/api-security";
 import { sendTrustedContactInvitationEmail } from "@/lib/email";
 import { applicationOrigin } from "@/lib/password-recovery";
 import { enforceRateLimits } from "@/lib/rate-limit";
-import {
-  emergencyCodeHash,
-  encryptContactData,
-  generateEmergencyCode,
-  publicContact,
-} from "@/lib/trusted-contact-crypto";
+import { encryptContactData, publicContact } from "@/lib/trusted-contact-crypto";
 import { decryptUserName } from "@/lib/user-crypto";
+import { CLIENT_VAULT_CRYPTO_VERSION, validateProtectedVaultKey } from "@/lib/client-vault-crypto";
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 
 export async function GET() {
   const session = await getSession();
@@ -22,10 +19,16 @@ export async function GET() {
 
   const contacts = await prisma.trustedContact.findMany({
     where: { userId: session.userId },
+    include: { accessRequests: true },
     orderBy: { createdAt: "desc" },
   });
 
-  return privateJson({ contacts: contacts.map(publicContact) });
+  return privateJson({
+    contacts: contacts.map((contact) => ({
+      ...publicContact(contact),
+      accessRequest: contact.accessRequests[0] ?? null,
+    })),
+  });
 }
 
 export async function POST(req: NextRequest) {
@@ -37,14 +40,29 @@ export async function POST(req: NextRequest) {
   try {
     const parsed = await readBoundedJson(req, 8 * 1024);
     if (!parsed.ok) return parsed.response;
-    const { name, email, phone, relation } = parsed.value;
+    const { id, name, email, phone, relation, accessCodeHash, emergencyVaultKey } = parsed.value;
     const cleanName = safeText(name, 100);
     const cleanEmail = safeText(email, 320).toLowerCase();
     const cleanPhone = safeText(phone, 40);
     const cleanRelation = safeText(relation, 100);
 
-    if (!cleanName || !cleanEmail || !cleanRelation) {
+    if (
+      !cleanName ||
+      !cleanEmail ||
+      !cleanRelation ||
+      typeof id !== "string" ||
+      !UUID.test(id) ||
+      typeof accessCodeHash !== "string" ||
+      !/^[a-f0-9]{64}$/u.test(accessCodeHash)
+    ) {
       return privateJson({ error: "Nama, email, dan hubungan wajib diisi" }, { status: 400 });
+    }
+
+    let emergencyVaultKeyEnvelope;
+    try {
+      emergencyVaultKeyEnvelope = validateProtectedVaultKey(emergencyVaultKey, "emergency");
+    } catch {
+      return privateJson({ error: "Kunci akses darurat tidak valid" }, { status: 400 });
     }
     if (
       Buffer.byteLength(cleanEmail, "utf8") > 320 ||
@@ -77,21 +95,20 @@ export async function POST(req: NextRequest) {
       return privateJson({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const emergencyCode = generateEmergencyCode();
-    const contactId = crypto.randomUUID();
-
     const contact = await prisma.trustedContact.create({
       data: {
-        id: contactId,
+        id,
         userId: session.userId,
         ...encryptContactData({
-          id: contactId,
+          id,
           name: cleanName,
           email: cleanEmail,
           phone: cleanPhone || null,
           relation: cleanRelation,
         }),
-        accessCodeHash: emergencyCodeHash(emergencyCode),
+        accessCodeHash,
+        emergencyVaultKeyEnvelope,
+        emergencyCryptoVersion: CLIENT_VAULT_CRYPTO_VERSION,
       },
     });
 
@@ -117,7 +134,6 @@ export async function POST(req: NextRequest) {
     return privateJson(
       {
         contact: publicContact(contact),
-        emergencyCode,
         invitationRecipient: cleanEmail,
       },
       { status: 201 },

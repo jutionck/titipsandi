@@ -12,12 +12,16 @@ export async function POST(req: NextRequest) {
   try {
     const parsed = await readBoundedJson(req, 8 * 1024);
     if (!parsed.ok) return parsed.response;
-    const { email, password } = parsed.value;
+    const { email, authenticationSecret } = parsed.value;
 
-    if (typeof email !== "string" || typeof password !== "string") {
+    if (
+      typeof email !== "string" ||
+      typeof authenticationSecret !== "string" ||
+      !/^[A-Za-z0-9_-]{43}$/u.test(authenticationSecret)
+    ) {
       return privateJson({ error: "Email dan password wajib diisi" }, { status: 400 });
     }
-    if (Buffer.byteLength(email, "utf8") > 320 || Buffer.byteLength(password, "utf8") > 72) {
+    if (Buffer.byteLength(email, "utf8") > 320) {
       return privateJson({ error: "Email atau password salah" }, { status: 401 });
     }
 
@@ -49,7 +53,7 @@ export async function POST(req: NextRequest) {
       return privateJson({ error: "Email atau password salah" }, { status: 401 });
     }
 
-    const valid = await bcrypt.compare(password, user.passwordHash);
+    const valid = await bcrypt.compare(authenticationSecret, user.passwordHash);
     if (!valid) {
       return privateJson({ error: "Email atau password salah" }, { status: 401 });
     }

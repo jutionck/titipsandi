@@ -1,43 +1,45 @@
 import { NextRequest } from "next/server";
-import crypto from "crypto";
-import { prisma } from "@/lib/prisma";
-import { getSession } from "@/lib/auth";
-import { privateJson, readBoundedJson, safeText } from "@/lib/api-security";
-import { encryptVaultField, publicVaultSummary } from "@/lib/vault-crypto";
-import { isCategoryValue } from "@/lib/categories";
 
-export async function GET(req: NextRequest) {
+import { getSession } from "@/lib/auth";
+import { privateJson, readBoundedJson } from "@/lib/api-security";
+import {
+  CLIENT_VAULT_CRYPTO_VERSION,
+  validateClientEncryptedVaultPayload,
+} from "@/lib/client-vault-crypto";
+import { prisma } from "@/lib/prisma";
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
+
+export async function GET() {
   const session = await getSession();
   if (!session) {
     return privateJson({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { searchParams } = new URL(req.url);
-  const category = searchParams.get("category");
-  const search = searchParams.get("search");
-
-  const where: Record<string, unknown> = { userId: session.userId };
-  if (category) where.category = category;
-
   const entries = await prisma.vaultEntry.findMany({
-    where,
+    where: {
+      userId: session.userId,
+      clientEncryptionVersion: CLIENT_VAULT_CRYPTO_VERSION,
+    },
+    select: {
+      id: true,
+      clientEncryptedPayload: true,
+      clientEncryptionVersion: true,
+      createdAt: true,
+      updatedAt: true,
+    },
     orderBy: { updatedAt: "desc" },
   });
 
-  const publicEntries = entries.map(publicVaultSummary);
-
-  let filteredEntries = publicEntries;
-  if (search) {
-    const s = search.toLowerCase();
-    filteredEntries = publicEntries.filter(
-      (e) =>
-        e.title.toLowerCase().includes(s) ||
-        e.username?.toLowerCase().includes(s) ||
-        e.email?.toLowerCase().includes(s),
-    );
-  }
-
-  return privateJson({ entries: filteredEntries });
+  return privateJson({
+    entries: entries.map((entry) => ({
+      id: entry.id,
+      encryptedPayload: entry.clientEncryptedPayload,
+      encryptionVersion: entry.clientEncryptionVersion,
+      createdAt: entry.createdAt,
+      updatedAt: entry.updatedAt,
+    })),
+  });
 }
 
 export async function POST(req: NextRequest) {
@@ -46,46 +48,34 @@ export async function POST(req: NextRequest) {
     return privateJson({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const parsed = await readBoundedJson(req, 128 * 1024);
+  if (!parsed.ok) return parsed.response;
+
+  const { id, encryptedPayload } = parsed.value;
+  if (typeof id !== "string" || !UUID.test(id)) {
+    return privateJson({ error: "ID entry tidak valid." }, { status: 400 });
+  }
+
+  let envelope;
   try {
-    const parsed = await readBoundedJson(req, 128 * 1024);
-    if (!parsed.ok) return parsed.response;
-    const body = parsed.value;
-    const { category, title, username, email, password, pin, url, notes } = body;
-    const cleanCategory = safeText(category, 40);
-    const cleanTitle = safeText(title, 200);
-    const cleanPassword = typeof password === "string" ? password : "";
+    envelope = validateClientEncryptedVaultPayload(encryptedPayload);
+  } catch {
+    return privateJson({ error: "Ciphertext entry tidak valid." }, { status: 400 });
+  }
 
-    if (!cleanCategory || !cleanTitle || !cleanPassword) {
-      return privateJson({ error: "Kategori, judul, dan password wajib diisi" }, { status: 400 });
-    }
-
-    if (!isCategoryValue(cleanCategory)) {
-      return privateJson({ error: "Kategori tidak valid" }, { status: 400 });
-    }
-
-    if (cleanPassword.length > 10_000) {
-      return privateJson({ error: "Password melebihi batas 10.000 karakter" }, { status: 400 });
-    }
-
-    const entryId = crypto.randomUUID();
+  try {
     const entry = await prisma.vaultEntry.create({
       data: {
-        id: entryId,
+        id,
         userId: session.userId,
-        category: cleanCategory,
-        title: encryptVaultField("title", cleanTitle, entryId)!,
-        username: encryptVaultField("username", safeText(username, 500), entryId),
-        email: encryptVaultField("email", safeText(email, 500), entryId),
-        password: encryptVaultField("password", cleanPassword, entryId)!,
-        pin: encryptVaultField("pin", safeText(pin, 500), entryId),
-        url: encryptVaultField("url", safeText(url, 2_000), entryId),
-        notes: encryptVaultField("notes", safeText(notes, 10_000), entryId),
+        clientEncryptedPayload: envelope,
+        clientEncryptionVersion: CLIENT_VAULT_CRYPTO_VERSION,
       },
       select: { id: true, createdAt: true },
     });
 
     return privateJson({ entry }, { status: 201 });
   } catch {
-    return privateJson({ error: "Terjadi kesalahan server" }, { status: 500 });
+    return privateJson({ error: "Entry belum dapat disimpan." }, { status: 409 });
   }
 }

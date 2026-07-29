@@ -29,7 +29,7 @@ export default function HomePage() {
             <div>
               <h3 className="text-sm font-semibold text-gray-900">Enkripsi AES-256</h3>
               <p className="text-xs text-gray-500">
-                Data sensitif dienkripsi di server aplikasi sebelum disimpan ke database.
+                Isi vault dienkripsi di browser sebelum dikirim dan disimpan ke database.
               </p>
             </div>
           </div>

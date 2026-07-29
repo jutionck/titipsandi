@@ -6,6 +6,8 @@ import Link from "next/link";
 import { CATEGORIES } from "@/lib/categories";
 import BottomNav from "@/components/BottomNav";
 import LogoutButton from "@/components/LogoutButton";
+import { useVaultKey } from "@/components/VaultKeyProvider";
+import { decryptClientVaultPayload } from "@/lib/client-vault-crypto";
 import {
   Shield,
   Search,
@@ -44,6 +46,7 @@ interface VaultSecret {
 
 function DashboardPageContent() {
   const router = useRouter();
+  const { vaultKey, userId } = useVaultKey();
   const searchParams = useSearchParams();
   const showCategoriesSheet = searchParams.get("categories") === "true";
 
@@ -63,22 +66,70 @@ function DashboardPageContent() {
 
   const fetchEntries = useCallback(async () => {
     try {
-      const params = new URLSearchParams();
-      if (activeCategory) params.set("category", activeCategory);
-      if (search) params.set("search", search);
-      const res = await fetch(`/api/vault?${params}`);
+      if (!vaultKey || !userId) return;
+      const res = await fetch("/api/vault", { cache: "no-store" });
       if (res.status === 401) {
         router.push("/login");
         return;
       }
       const data = await res.json();
-      setEntries(data.entries || []);
+      if (!res.ok) throw new Error(data.error || "Gagal memuat vault.");
+
+      const decrypted = await Promise.all(
+        (data.entries || []).map(
+          async (entry: {
+            id: string;
+            encryptedPayload: unknown;
+            updatedAt: string;
+          }): Promise<{ entry: VaultEntry; secret: VaultSecret }> => {
+            const payload = await decryptClientVaultPayload(
+              vaultKey,
+              userId,
+              entry.id,
+              entry.encryptedPayload,
+            );
+            return {
+              entry: {
+                id: entry.id,
+                category: payload.category,
+                title: payload.title,
+                username: payload.username,
+                email: payload.email,
+                hasPin: Boolean(payload.pin),
+                hasUrl: Boolean(payload.url),
+                hasNotes: Boolean(payload.notes),
+                updatedAt: entry.updatedAt,
+              },
+              secret: {
+                password: payload.password,
+                pin: payload.pin,
+                url: payload.url,
+                notes: payload.notes,
+              },
+            };
+          },
+        ),
+      );
+      const normalizedSearch = search.trim().toLowerCase();
+      const filtered = decrypted.filter(
+        ({ entry }) =>
+          (!activeCategory || entry.category === activeCategory) &&
+          (!normalizedSearch ||
+            entry.title.toLowerCase().includes(normalizedSearch) ||
+            entry.username?.toLowerCase().includes(normalizedSearch) ||
+            entry.email?.toLowerCase().includes(normalizedSearch)),
+      );
+
+      setEntries(filtered.map(({ entry }) => entry));
+      setSecretEntries(
+        Object.fromEntries(decrypted.map(({ entry, secret }) => [entry.id, secret])),
+      );
     } catch {
-      /* ignore */
+      setEntries([]);
     } finally {
       setLoading(false);
     }
-  }, [activeCategory, search, router]);
+  }, [activeCategory, router, search, userId, vaultKey]);
 
   useEffect(() => {
     let active = true;
@@ -155,11 +206,18 @@ function DashboardPageContent() {
       if (!response.ok) throw new Error("Gagal memuat detail rahasia");
 
       const data = await response.json();
+      if (!vaultKey || !userId) throw new Error("Vault sedang terkunci.");
+      const payload = await decryptClientVaultPayload(
+        vaultKey,
+        userId,
+        id,
+        data.entry.encryptedPayload,
+      );
       const secret: VaultSecret = {
-        password: data.entry.password,
-        pin: data.entry.pin,
-        url: data.entry.url,
-        notes: data.entry.notes,
+        password: payload.password,
+        pin: payload.pin,
+        url: payload.url,
+        notes: payload.notes,
       };
       setSecretEntries((current) => ({ ...current, [id]: secret }));
       return secret;

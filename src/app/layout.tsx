@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { connection } from "next/server";
 import PwaInstallBanner from "@/components/PwaInstallBanner";
+import VaultKeyProvider from "@/components/VaultKeyProvider";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -51,8 +52,10 @@ export default async function RootLayout({
         suppressHydrationWarning
         className="min-h-full flex flex-col bg-gray-50 text-gray-900 select-none"
       >
-        {children}
-        <PwaInstallBanner />
+        <VaultKeyProvider>
+          {children}
+          <PwaInstallBanner />
+        </VaultKeyProvider>
       </body>
     </html>
   );
