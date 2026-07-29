@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import PwaInstallBanner from "@/components/PwaInstallBanner";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -16,6 +17,11 @@ export const metadata: Metadata = {
   title: "TitipSandi - Password Vault Keluarga",
   description: "Simpan password & PIN dengan aman untuk keluarga tercinta",
   manifest: "/manifest.json",
+  icons: {
+    icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
+    shortcut: "/icon.svg",
+    apple: "/icons/icon-192.png",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
@@ -37,12 +43,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="id"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col bg-gray-50 text-gray-900 select-none">
+    <html lang="id" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
+      <body
+        suppressHydrationWarning
+        className="min-h-full flex flex-col bg-gray-50 text-gray-900 select-none"
+      >
         {children}
+        <PwaInstallBanner />
         <script
           dangerouslySetInnerHTML={{
             __html: `

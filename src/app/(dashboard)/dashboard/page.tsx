@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { CATEGORIES } from "@/lib/categories";
 import BottomNav from "@/components/BottomNav";
+import LogoutButton from "@/components/LogoutButton";
 import {
   Shield,
   Search,
@@ -17,10 +18,9 @@ import {
   LockKeyhole,
   ExternalLink,
   Users,
-  LogOut,
   Plus,
   X,
-  Info
+  Info,
 } from "lucide-react";
 
 interface VaultEntry {
@@ -80,12 +80,6 @@ function DashboardPageContent() {
     };
   }, [fetchEntries]);
 
-  async function handleLogout() {
-    if (!confirm("Keluar dari aplikasi?")) return;
-    await fetch("/api/auth/logout", { method: "POST" });
-    router.push("/login");
-  }
-
   async function handleDelete(id: string) {
     if (!confirm("Yakin ingin menghapus entry ini?")) return;
     await fetch(`/api/vault/${id}`, { method: "DELETE" });
@@ -132,26 +126,35 @@ function DashboardPageContent() {
 
           {/* Desktop Nav */}
           <div className="hidden sm:flex items-center gap-4">
-            <Link href="/dashboard" className="text-xs font-bold text-gray-900 hover:text-gray-650 flex items-center gap-1">
+            <Link
+              href="/dashboard"
+              className="text-xs font-bold text-gray-900 hover:text-gray-650 flex items-center gap-1"
+            >
               <Shield className="w-3.5 h-3.5" />
               Vault
             </Link>
-            <Link href="/trusted" className="text-xs font-bold text-gray-500 hover:text-gray-900 flex items-center gap-1">
+            <Link
+              href="/trusted"
+              className="text-xs font-bold text-gray-500 hover:text-gray-900 flex items-center gap-1"
+            >
               <Users className="w-3.5 h-3.5" />
               Kontak Darurat
             </Link>
-            <Link href="/vault/new" className="text-xs font-bold text-gray-500 hover:text-gray-900 flex items-center gap-1">
+            <Link
+              href="/vault/new"
+              className="text-xs font-bold text-gray-500 hover:text-gray-900 flex items-center gap-1"
+            >
               <Plus className="w-3.5 h-3.5" />
               Tambah
             </Link>
-            <Link href="/info" className="text-xs font-bold text-gray-500 hover:text-gray-900 flex items-center gap-1">
+            <Link
+              href="/info"
+              className="text-xs font-bold text-gray-500 hover:text-gray-900 flex items-center gap-1"
+            >
               <Info className="w-3.5 h-3.5" />
               Informasi
             </Link>
-            <button onClick={handleLogout} className="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1 cursor-pointer">
-              <LogOut className="w-3.5 h-3.5" />
-              Keluar
-            </button>
+            <LogoutButton className="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1 cursor-pointer" />
           </div>
 
           <span className="sm:hidden text-[10px] font-bold text-gray-400 uppercase tracking-widest bg-gray-100 py-1 px-2.5 rounded-full">
@@ -163,7 +166,9 @@ function DashboardPageContent() {
       <main className="flex-1 max-w-6xl w-full mx-auto px-4 py-6 space-y-6">
         <div>
           <h2 className="text-xl font-extrabold text-gray-900 tracking-tight">Brankas Anda</h2>
-          <p className="text-xs text-gray-400 font-semibold uppercase tracking-wider mt-0.5">{entries.length} Akun Tersimpan</p>
+          <p className="text-xs text-gray-400 font-semibold uppercase tracking-wider mt-0.5">
+            {entries.length} Akun Tersimpan
+          </p>
         </div>
 
         {/* Search */}
@@ -225,7 +230,9 @@ function DashboardPageContent() {
                 <Icon className="w-3.5 h-3.5" />
                 <span>{cat.label}</span>
                 {categoryCounts[cat.value] ? (
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${activeCategory === cat.value ? "bg-white/20 text-white" : "bg-gray-100 text-gray-500"}`}>
+                  <span
+                    className={`text-[10px] px-1.5 py-0.5 rounded-full ${activeCategory === cat.value ? "bg-white/20 text-white" : "bg-gray-100 text-gray-500"}`}
+                  >
                     {categoryCounts[cat.value]}
                   </span>
                 ) : null}
@@ -244,7 +251,9 @@ function DashboardPageContent() {
             </div>
             <div className="space-y-1">
               <p className="text-sm font-semibold text-gray-900">Belum ada password</p>
-              <p className="text-xs text-gray-500">Mulai dengan menambahkan password atau PIN pertama Anda.</p>
+              <p className="text-xs text-gray-500">
+                Mulai dengan menambahkan password atau PIN pertama Anda.
+              </p>
             </div>
             <Link
               href="/vault/new"
@@ -266,11 +275,10 @@ function DashboardPageContent() {
                       {renderCategoryIcon(entry.category)}
                     </div>
                     <div className="min-w-0">
-                      <h3 className="text-sm font-bold text-gray-900 truncate">
-                        {entry.title}
-                      </h3>
+                      <h3 className="text-sm font-bold text-gray-900 truncate">{entry.title}</h3>
                       <p className="text-[10px] font-semibold text-gray-450 uppercase tracking-wider">
-                        {CATEGORIES.find((c) => c.value === entry.category)?.label || entry.category}
+                        {CATEGORIES.find((c) => c.value === entry.category)?.label ||
+                          entry.category}
                       </p>
                     </div>
                   </div>
@@ -297,12 +305,18 @@ function DashboardPageContent() {
                     <div className="flex items-center justify-between sm:justify-start gap-4 p-2 bg-gray-50/60 rounded-xl">
                       <span className="text-gray-450 font-medium">Username</span>
                       <div className="flex items-center gap-1.5 min-w-0">
-                        <span className="text-gray-900 font-semibold truncate">{entry.username}</span>
+                        <span className="text-gray-900 font-semibold truncate">
+                          {entry.username}
+                        </span>
                         <button
                           onClick={() => copyToClipboard(entry.username!, `un-${entry.id}`)}
                           className="p-1 text-gray-400 hover:text-gray-600"
                         >
-                          {copiedId === `un-${entry.id}` ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
+                          {copiedId === `un-${entry.id}` ? (
+                            <Check className="w-3.5 h-3.5 text-green-600" />
+                          ) : (
+                            <Copy className="w-3.5 h-3.5" />
+                          )}
                         </button>
                       </div>
                     </div>
@@ -317,7 +331,11 @@ function DashboardPageContent() {
                           onClick={() => copyToClipboard(entry.email!, `em-${entry.id}`)}
                           className="p-1 text-gray-400 hover:text-gray-600"
                         >
-                          {copiedId === `em-${entry.id}` ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
+                          {copiedId === `em-${entry.id}` ? (
+                            <Check className="w-3.5 h-3.5 text-green-600" />
+                          ) : (
+                            <Copy className="w-3.5 h-3.5" />
+                          )}
                         </button>
                       </div>
                     </div>
@@ -334,13 +352,21 @@ function DashboardPageContent() {
                           onClick={() => togglePassword(entry.id)}
                           className="p-1 text-gray-400 hover:text-gray-600"
                         >
-                          {visiblePasswords.has(entry.id) ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                          {visiblePasswords.has(entry.id) ? (
+                            <EyeOff className="w-3.5 h-3.5" />
+                          ) : (
+                            <Eye className="w-3.5 h-3.5" />
+                          )}
                         </button>
                         <button
                           onClick={() => copyToClipboard(entry.password, `pw-${entry.id}`)}
                           className="p-1 text-gray-400 hover:text-gray-600"
                         >
-                          {copiedId === `pw-${entry.id}` ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
+                          {copiedId === `pw-${entry.id}` ? (
+                            <Check className="w-3.5 h-3.5 text-green-600" />
+                          ) : (
+                            <Copy className="w-3.5 h-3.5" />
+                          )}
                         </button>
                       </div>
                     </div>
@@ -358,13 +384,21 @@ function DashboardPageContent() {
                             onClick={() => togglePassword(`pin-${entry.id}`)}
                             className="p-1 text-gray-400 hover:text-gray-600"
                           >
-                            {visiblePasswords.has(`pin-${entry.id}`) ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                            {visiblePasswords.has(`pin-${entry.id}`) ? (
+                              <EyeOff className="w-3.5 h-3.5" />
+                            ) : (
+                              <Eye className="w-3.5 h-3.5" />
+                            )}
                           </button>
                           <button
                             onClick={() => copyToClipboard(entry.pin!, `pin-${entry.id}`)}
                             className="p-1 text-gray-400 hover:text-gray-600"
                           >
-                            {copiedId === `pin-${entry.id}` ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
+                            {copiedId === `pin-${entry.id}` ? (
+                              <Check className="w-3.5 h-3.5 text-green-600" />
+                            ) : (
+                              <Copy className="w-3.5 h-3.5" />
+                            )}
                           </button>
                         </div>
                       </div>
@@ -437,7 +471,9 @@ function DashboardPageContent() {
                       : "bg-gray-50 border-gray-100 text-gray-600 hover:bg-gray-100"
                   }`}
                 >
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-1.5 ${!activeCategory ? "bg-white/20" : "bg-white shadow-xs"}`}>
+                  <div
+                    className={`w-10 h-10 rounded-xl flex items-center justify-center mb-1.5 ${!activeCategory ? "bg-white/20" : "bg-white shadow-xs"}`}
+                  >
                     <Shield className="w-5 h-5" />
                   </div>
                   <span className="text-[10px] font-bold text-center truncate w-full">Semua</span>
@@ -458,10 +494,14 @@ function DashboardPageContent() {
                           : "bg-gray-50 border-gray-100 text-gray-600 hover:bg-gray-100"
                       }`}
                     >
-                      <div className={`w-10 h-10 rounded-xl relative flex items-center justify-center mb-1.5 ${isSelected ? "bg-white/20" : "bg-white shadow-xs"}`}>
+                      <div
+                        className={`w-10 h-10 rounded-xl relative flex items-center justify-center mb-1.5 ${isSelected ? "bg-white/20" : "bg-white shadow-xs"}`}
+                      >
                         <Icon className="w-5 h-5" />
                         {categoryCounts[cat.value] ? (
-                          <span className={`absolute -top-1.5 -right-1.5 text-[9px] font-extrabold px-1.5 py-0.5 rounded-full ${isSelected ? "bg-white text-gray-900" : "bg-gray-900 text-white"}`}>
+                          <span
+                            className={`absolute -top-1.5 -right-1.5 text-[9px] font-extrabold px-1.5 py-0.5 rounded-full ${isSelected ? "bg-white text-gray-900" : "bg-gray-900 text-white"}`}
+                          >
                             {categoryCounts[cat.value]}
                           </span>
                         ) : null}
@@ -483,7 +523,13 @@ function DashboardPageContent() {
 
 export default function DashboardPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-sm font-semibold text-gray-400">Memuat...</div>}>
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center text-sm font-semibold text-gray-400">
+          Memuat...
+        </div>
+      }
+    >
       <DashboardPageContent />
     </Suspense>
   );

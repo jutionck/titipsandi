@@ -16,10 +16,7 @@ export function normalizeEmergencyCode(code: string) {
 }
 
 export function emergencyCodeHash(code: string) {
-  return crypto
-    .createHash("sha256")
-    .update(normalizeEmergencyCode(code))
-    .digest("hex");
+  return crypto.createHash("sha256").update(normalizeEmergencyCode(code)).digest("hex");
 }
 
 export function encryptContactData(data: {
@@ -31,13 +28,8 @@ export function encryptContactData(data: {
 }) {
   return {
     name: encrypt(data.name.trim(), `contact.name:${data.id}`),
-    email: encrypt(
-      data.email.trim().toLowerCase(),
-      `contact.email:${data.id}`
-    ),
-    phone: data.phone
-      ? encrypt(data.phone.trim(), `contact.phone:${data.id}`)
-      : null,
+    email: encrypt(data.email.trim().toLowerCase(), `contact.email:${data.id}`),
+    phone: data.phone ? encrypt(data.phone.trim(), `contact.phone:${data.id}`) : null,
     relation: encrypt(data.relation.trim(), `contact.relation:${data.id}`),
   };
 }
@@ -47,9 +39,7 @@ export function publicContact(contact: TrustedContact) {
     id: contact.id,
     name: decrypt(contact.name, `contact.name:${contact.id}`),
     email: decrypt(contact.email, `contact.email:${contact.id}`),
-    phone: contact.phone
-      ? decrypt(contact.phone, `contact.phone:${contact.id}`)
-      : null,
+    phone: contact.phone ? decrypt(contact.phone, `contact.phone:${contact.id}`) : null,
     relation: decrypt(contact.relation, `contact.relation:${contact.id}`),
     isActivated: contact.isActivated,
     activatedAt: contact.activatedAt,

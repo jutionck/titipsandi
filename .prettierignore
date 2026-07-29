@@ -1,0 +1,9 @@
+.next
+node_modules
+src/generated
+coverage
+build
+out
+*.db
+*.dump
+*.backup

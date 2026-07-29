@@ -3,15 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { CATEGORIES } from "@/lib/categories";
-import {
-  ArrowLeft,
-  ShieldAlert,
-  Eye,
-  EyeOff,
-  Copy,
-  Check,
-  ExternalLink
-} from "lucide-react";
+import { ArrowLeft, ShieldAlert, Eye, EyeOff, Copy, Check, ExternalLink } from "lucide-react";
 
 interface VaultEntry {
   id: string;
@@ -91,7 +83,10 @@ export default function EmergencyPage() {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col justify-between p-6">
         <div className="w-full max-w-sm mx-auto">
-          <Link href="/" className="inline-flex items-center gap-2 text-xs font-semibold text-gray-500 hover:text-gray-900 mb-8 py-1.5 px-3 bg-white border border-gray-200 rounded-full transition shadow-sm">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 text-xs font-semibold text-gray-500 hover:text-gray-900 mb-8 py-1.5 px-3 bg-white border border-gray-200 rounded-full transition shadow-sm"
+          >
             <ArrowLeft className="w-3.5 h-3.5" /> Kembali
           </Link>
         </div>
@@ -103,7 +98,8 @@ export default function EmergencyPage() {
             </div>
             <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Akses Darurat</h1>
             <p className="text-sm text-gray-500">
-              Masukkan kode akses darurat yang diberikan oleh pemilik brankas untuk melihat informasi rahasia.
+              Masukkan kode akses darurat yang diberikan oleh pemilik brankas untuk melihat
+              informasi rahasia.
             </p>
           </div>
 
@@ -144,25 +140,31 @@ export default function EmergencyPage() {
     );
   }
 
-  const grouped = data.entries.reduce<Record<string, VaultEntry[]>>(
-    (acc, entry) => {
-      if (!acc[entry.category]) acc[entry.category] = [];
-      acc[entry.category].push(entry);
-      return acc;
-    },
-    {}
-  );
+  const grouped = data.entries.reduce<Record<string, VaultEntry[]>>((acc, entry) => {
+    if (!acc[entry.category]) acc[entry.category] = [];
+    acc[entry.category].push(entry);
+    return acc;
+  }, {});
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <header className="bg-red-600 text-white sticky top-0 z-10 shadow-md">
         <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
           <div>
-            <span className="text-[10px] font-bold uppercase tracking-wider opacity-85">Akses Darurat</span>
-            <h1 className="text-base font-extrabold tracking-tight">TitipSandi · {data.owner.name}</h1>
-            <p className="text-xs opacity-75 mt-0.5">Oleh: {data.contact.name} ({data.contact.relation})</p>
+            <span className="text-[10px] font-bold uppercase tracking-wider opacity-85">
+              Akses Darurat
+            </span>
+            <h1 className="text-base font-extrabold tracking-tight">
+              TitipSandi · {data.owner.name}
+            </h1>
+            <p className="text-xs opacity-75 mt-0.5">
+              Oleh: {data.contact.name} ({data.contact.relation})
+            </p>
           </div>
-          <Link href="/" className="p-1.5 hover:bg-red-700/50 rounded-lg transition text-xs font-semibold border border-white/20">
+          <Link
+            href="/"
+            className="p-1.5 hover:bg-red-700/50 rounded-lg transition text-xs font-semibold border border-white/20"
+          >
             Keluar
           </Link>
         </div>
@@ -172,7 +174,8 @@ export default function EmergencyPage() {
         <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex gap-3 items-start">
           <ShieldAlert className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
           <div className="text-xs text-amber-800 leading-relaxed font-medium">
-            <strong>Peringatan:</strong> Informasi di bawah ini bersifat sangat rahasia. Gunakan hanya untuk keperluan darurat yang sah dan mendesak.
+            <strong>Peringatan:</strong> Informasi di bawah ini bersifat sangat rahasia. Gunakan
+            hanya untuk keperluan darurat yang sah dan mendesak.
           </div>
         </div>
 
@@ -190,21 +193,25 @@ export default function EmergencyPage() {
                   key={entry.id}
                   className="bg-white border border-gray-250/70 rounded-2xl p-4 shadow-sm space-y-3"
                 >
-                  <h3 className="text-sm font-bold text-gray-900">
-                    {entry.title}
-                  </h3>
+                  <h3 className="text-sm font-bold text-gray-900">{entry.title}</h3>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                     {entry.username && (
                       <div className="flex items-center justify-between sm:justify-start gap-4 p-2 bg-gray-50/60 rounded-xl">
                         <span className="text-gray-450 font-medium">Username</span>
                         <div className="flex items-center gap-1.5 min-w-0">
-                          <span className="text-gray-900 font-semibold truncate">{entry.username}</span>
+                          <span className="text-gray-900 font-semibold truncate">
+                            {entry.username}
+                          </span>
                           <button
                             onClick={() => copyToClipboard(entry.username!, `un-${entry.id}`)}
                             className="p-1 text-gray-400 hover:text-gray-600"
                           >
-                            {copiedId === `un-${entry.id}` ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
+                            {copiedId === `un-${entry.id}` ? (
+                              <Check className="w-3.5 h-3.5 text-green-600" />
+                            ) : (
+                              <Copy className="w-3.5 h-3.5" />
+                            )}
                           </button>
                         </div>
                       </div>
@@ -214,12 +221,18 @@ export default function EmergencyPage() {
                       <div className="flex items-center justify-between sm:justify-start gap-4 p-2 bg-gray-50/60 rounded-xl">
                         <span className="text-gray-450 font-medium">Email</span>
                         <div className="flex items-center gap-1.5 min-w-0">
-                          <span className="text-gray-900 font-semibold truncate">{entry.email}</span>
+                          <span className="text-gray-900 font-semibold truncate">
+                            {entry.email}
+                          </span>
                           <button
                             onClick={() => copyToClipboard(entry.email!, `em-${entry.id}`)}
                             className="p-1 text-gray-400 hover:text-gray-600"
                           >
-                            {copiedId === `em-${entry.id}` ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
+                            {copiedId === `em-${entry.id}` ? (
+                              <Check className="w-3.5 h-3.5 text-green-600" />
+                            ) : (
+                              <Copy className="w-3.5 h-3.5" />
+                            )}
                           </button>
                         </div>
                       </div>
@@ -236,13 +249,21 @@ export default function EmergencyPage() {
                             onClick={() => togglePassword(entry.id)}
                             className="p-1 text-gray-400 hover:text-gray-600"
                           >
-                            {visiblePasswords.has(entry.id) ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                            {visiblePasswords.has(entry.id) ? (
+                              <EyeOff className="w-3.5 h-3.5" />
+                            ) : (
+                              <Eye className="w-3.5 h-3.5" />
+                            )}
                           </button>
                           <button
                             onClick={() => copyToClipboard(entry.password, `pw-${entry.id}`)}
                             className="p-1 text-gray-400 hover:text-gray-600"
                           >
-                            {copiedId === `pw-${entry.id}` ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
+                            {copiedId === `pw-${entry.id}` ? (
+                              <Check className="w-3.5 h-3.5 text-green-600" />
+                            ) : (
+                              <Copy className="w-3.5 h-3.5" />
+                            )}
                           </button>
                         </div>
                       </div>
@@ -260,13 +281,21 @@ export default function EmergencyPage() {
                               onClick={() => togglePassword(`pin-${entry.id}`)}
                               className="p-1 text-gray-400 hover:text-gray-600"
                             >
-                              {visiblePasswords.has(`pin-${entry.id}`) ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                              {visiblePasswords.has(`pin-${entry.id}`) ? (
+                                <EyeOff className="w-3.5 h-3.5" />
+                              ) : (
+                                <Eye className="w-3.5 h-3.5" />
+                              )}
                             </button>
                             <button
                               onClick={() => copyToClipboard(entry.pin!, `pin-${entry.id}`)}
                               className="p-1 text-gray-400 hover:text-gray-600"
                             >
-                              {copiedId === `pin-${entry.id}` ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
+                              {copiedId === `pin-${entry.id}` ? (
+                                <Check className="w-3.5 h-3.5 text-green-600" />
+                              ) : (
+                                <Copy className="w-3.5 h-3.5" />
+                              )}
                             </button>
                           </div>
                         </div>

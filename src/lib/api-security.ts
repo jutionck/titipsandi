@@ -5,10 +5,7 @@ export const PRIVATE_RESPONSE_HEADERS = {
   Pragma: "no-cache",
 };
 
-export function privateJson(
-  body: unknown,
-  init: { status?: number } = {}
-) {
+export function privateJson(body: unknown, init: { status?: number } = {}) {
   return NextResponse.json(body, {
     ...init,
     headers: PRIVATE_RESPONSE_HEADERS,
@@ -16,10 +13,7 @@ export function privateJson(
 }
 
 export function requireJson(req: NextRequest) {
-  return req.headers
-    .get("content-type")
-    ?.toLowerCase()
-    .startsWith("application/json");
+  return req.headers.get("content-type")?.toLowerCase().startsWith("application/json");
 }
 
 export function safeText(value: unknown, maxLength: number) {

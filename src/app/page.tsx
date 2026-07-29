@@ -15,7 +15,8 @@ export default function HomePage() {
           <div>
             <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">TitipSandi</h1>
             <p className="mt-2 text-sm text-gray-500 max-w-xs mx-auto">
-              Simpan password dan PIN dengan enkripsi terautentikasi. Hubungkan dengan keluarga untuk akses darurat.
+              Simpan password dan PIN dengan enkripsi terautentikasi. Hubungkan dengan keluarga
+              untuk akses darurat.
             </p>
           </div>
         </div>
@@ -27,7 +28,9 @@ export default function HomePage() {
             </div>
             <div>
               <h3 className="text-sm font-semibold text-gray-900">Enkripsi AES-256</h3>
-              <p className="text-xs text-gray-500">Data sensitif dienkripsi di server aplikasi sebelum disimpan ke database.</p>
+              <p className="text-xs text-gray-500">
+                Data sensitif dienkripsi di server aplikasi sebelum disimpan ke database.
+              </p>
             </div>
           </div>
 
@@ -37,7 +40,9 @@ export default function HomePage() {
             </div>
             <div>
               <h3 className="text-sm font-semibold text-gray-900">Kontak Terpercaya</h3>
-              <p className="text-xs text-gray-500">Tentukan istri, anak, atau kerabat dekat yang bisa meminta akses.</p>
+              <p className="text-xs text-gray-500">
+                Tentukan istri, anak, atau kerabat dekat yang bisa meminta akses.
+              </p>
             </div>
           </div>
         </div>

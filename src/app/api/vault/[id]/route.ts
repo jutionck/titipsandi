@@ -3,11 +3,9 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { privateJson, requireJson, safeText } from "@/lib/api-security";
 import { encryptVaultField, publicVaultEntry } from "@/lib/vault-crypto";
+import { isCategoryValue } from "@/lib/categories";
 
-export async function GET(
-  _req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getSession();
   if (!session) {
     return privateJson({ error: "Unauthorized" }, { status: 401 });
@@ -25,10 +23,7 @@ export async function GET(
   return privateJson({ entry: publicVaultEntry(entry) });
 }
 
-export async function PUT(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getSession();
   if (!session) {
     return privateJson({ error: "Unauthorized" }, { status: 401 });
@@ -50,12 +45,8 @@ export async function PUT(
 
     const body = await req.json();
     const { category, title, username, email, password, pin, url, notes } = body;
-    const cleanCategory =
-      category === undefined ? undefined : safeText(category, 40);
-    if (
-      cleanCategory !== undefined &&
-      !/^[a-z0-9-]+$/i.test(cleanCategory)
-    ) {
+    const cleanCategory = category === undefined ? undefined : safeText(category, 40);
+    if (cleanCategory !== undefined && !isCategoryValue(cleanCategory)) {
       return privateJson({ error: "Kategori tidak valid" }, { status: 400 });
     }
 
@@ -65,8 +56,7 @@ export async function PUT(
         category: cleanCategory ?? existing.category,
         title:
           title !== undefined
-            ? encryptVaultField("title", safeText(title, 200), id) ??
-              existing.title
+            ? (encryptVaultField("title", safeText(title, 200), id) ?? existing.title)
             : existing.title,
         username:
           username !== undefined
@@ -80,14 +70,8 @@ export async function PUT(
           typeof password === "string" && password
             ? encryptVaultField("password", password, id)!
             : existing.password,
-        pin:
-          pin !== undefined
-            ? encryptVaultField("pin", safeText(pin, 500), id)
-            : existing.pin,
-        url:
-          url !== undefined
-            ? encryptVaultField("url", safeText(url, 2_000), id)
-            : existing.url,
+        pin: pin !== undefined ? encryptVaultField("pin", safeText(pin, 500), id) : existing.pin,
+        url: url !== undefined ? encryptVaultField("url", safeText(url, 2_000), id) : existing.url,
         notes:
           notes !== undefined
             ? encryptVaultField("notes", safeText(notes, 10_000), id)
@@ -98,17 +82,11 @@ export async function PUT(
 
     return privateJson({ entry });
   } catch {
-    return privateJson(
-      { error: "Terjadi kesalahan server" },
-      { status: 500 }
-    );
+    return privateJson({ error: "Terjadi kesalahan server" }, { status: 500 });
   }
 }
 
-export async function DELETE(
-  _req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getSession();
   if (!session) {
     return privateJson({ error: "Unauthorized" }, { status: 401 });
