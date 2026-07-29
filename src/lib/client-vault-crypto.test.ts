@@ -161,6 +161,7 @@ describe("client vault crypto", () => {
     const encrypted = await encryptClientVaultPayload(created.vaultKey, userId, entryId, payload);
 
     expect(codeHash).toMatch(/^[a-f0-9]{64}$/u);
+    expect(await hashEmergencyAccessCode("AbCd")).not.toBe(await hashEmergencyAccessCode("ABCD"));
     await expect(decryptClientVaultPayload(unlocked, userId, entryId, encrypted)).resolves.toEqual(
       payload,
     );

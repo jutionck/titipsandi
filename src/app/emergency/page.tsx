@@ -40,6 +40,7 @@ export default function EmergencyPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    setPendingUntil("");
     setLoading(true);
 
     try {
@@ -163,11 +164,14 @@ export default function EmergencyPage() {
               <input
                 type="text"
                 value={accessCode}
-                onChange={(e) => setAccessCode(e.target.value.toUpperCase())}
+                onChange={(e) => setAccessCode(e.target.value)}
                 required
-                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-red-600 focus:border-transparent outline-none font-mono text-center text-xl tracking-widest font-extrabold uppercase transition shadow-sm"
-                placeholder="XXXXXXXX-XXXXXXXX-XXXXXXXX-XXXXXXXX"
-                maxLength={35}
+                autoComplete="off"
+                autoCapitalize="none"
+                spellCheck={false}
+                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-red-600 focus:border-transparent outline-none font-mono text-center text-base tracking-wider font-extrabold transition shadow-sm"
+                placeholder="Tempel kode akses darurat"
+                maxLength={64}
               />
             </div>
 
