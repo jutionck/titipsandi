@@ -85,4 +85,11 @@ describe("blind-index key separation", () => {
     expect(blindIndexCandidates("user@example.com", "user.email")).toContain(oldCurrent);
     expect(legacyBlindIndexCandidates("user@example.com", "user.email")).toContain(oldLegacy);
   });
+
+  it("deduplicates an active key repeated in the previous-key list", () => {
+    vi.stubEnv("ENCRYPTION_KEY_PREVIOUS", `${OLD_KEY},${OLD_KEY}`);
+
+    expect(blindIndexCandidates("user@example.com", "user.email")).toHaveLength(1);
+    expect(legacyBlindIndexCandidates("user@example.com", "user.email")).toHaveLength(1);
+  });
 });

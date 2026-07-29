@@ -45,9 +45,6 @@ function getKeyRing(): KeyMaterial[] {
     ...previousValues.map((value, index) => parseKey(value, `ENCRYPTION_KEY_PREVIOUS[${index}]`)),
   ];
   const uniqueKeys = new Map(keys.map((masterKey) => [fingerprint(masterKey), masterKey]));
-  if (uniqueKeys.size !== keys.length) {
-    throw new Error("Encryption key aktif dan sebelumnya tidak boleh duplikat.");
-  }
 
   return [...uniqueKeys].map(([keyFingerprint, masterKey]) => ({
     fingerprint: keyFingerprint,
