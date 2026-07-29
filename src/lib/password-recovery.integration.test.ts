@@ -8,6 +8,8 @@ const databaseTest = process.env.RUN_DATABASE_TESTS === "1" ? it : it.skip;
 databaseTest("consumes a recovery token once and revokes existing sessions", async () => {
   process.env.ENCRYPTION_KEY = "b".repeat(64);
   const { POST } = await import("@/app/api/auth/recovery/reset/route");
+  const { createProtectedVaultKey, deriveAuthenticationSecret } =
+    await import("@/lib/client-vault-crypto");
   const { createPasswordResetToken } = await import("@/lib/password-recovery");
   const { prisma } = await import("@/lib/prisma");
   const { clearRateLimits } = await import("@/lib/rate-limit");
@@ -16,6 +18,11 @@ databaseTest("consumes a recovery token once and revokes existing sessions", asy
   const emailHash = crypto.randomUUID();
   const generated = createPasswordResetToken();
   const newPassword = "new-password-for-integration-test";
+  const email = "integration@example.com";
+  const [createdVault, authenticationSecret] = await Promise.all([
+    createProtectedVaultKey(newPassword, id),
+    deriveAuthenticationSecret(newPassword, email),
+  ]);
   const clientIp = "198.51.100.25";
 
   try {
@@ -42,7 +49,11 @@ databaseTest("consumes a recovery token once and revokes existing sessions", asy
           "Content-Type": "application/json",
           "X-Forwarded-For": clientIp,
         },
-        body: JSON.stringify({ token: generated.token, password: newPassword }),
+        body: JSON.stringify({
+          token: generated.token,
+          authenticationSecret,
+          protectedVaultKey: createdVault.protectedVaultKey,
+        }),
       });
 
     await expect(POST(request())).resolves.toMatchObject({ status: 200 });
@@ -50,7 +61,8 @@ databaseTest("consumes a recovery token once and revokes existing sessions", asy
 
     const user = await prisma.user.findUniqueOrThrow({ where: { id } });
     expect(user.sessionVersion).toBe(1);
-    await expect(bcrypt.compare(newPassword, user.passwordHash)).resolves.toBe(true);
+    await expect(bcrypt.compare(authenticationSecret, user.passwordHash)).resolves.toBe(true);
+    expect(user.vaultKeyEnvelope).toEqual(createdVault.protectedVaultKey);
   } finally {
     await prisma.user.deleteMany({ where: { id } });
     await clearRateLimits([
