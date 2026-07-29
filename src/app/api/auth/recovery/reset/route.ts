@@ -11,7 +11,7 @@ import {
 import { prisma } from "@/lib/prisma";
 import { clearRateLimits, enforceRateLimits } from "@/lib/rate-limit";
 import { decryptUserEmail } from "@/lib/user-crypto";
-import { validateProtectedVaultKey } from "@/lib/client-vault-crypto";
+import { CLIENT_VAULT_CRYPTO_VERSION, validateProtectedVaultKey } from "@/lib/client-vault-crypto";
 
 const INVALID_LINK = "Tautan pemulihan tidak valid atau sudah kedaluwarsa.";
 
@@ -89,6 +89,7 @@ export async function POST(req: NextRequest) {
         data: {
           passwordHash,
           vaultKeyEnvelope,
+          vaultCryptoVersion: CLIENT_VAULT_CRYPTO_VERSION,
           sessionVersion: { increment: 1 },
         },
       });
