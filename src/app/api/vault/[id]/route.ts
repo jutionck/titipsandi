@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
-import { privateJson, requireJson, safeText } from "@/lib/api-security";
+import { privateJson, readBoundedJson, safeText } from "@/lib/api-security";
 import { encryptVaultField, publicVaultEntry } from "@/lib/vault-crypto";
 import { isCategoryValue } from "@/lib/categories";
 
@@ -39,15 +39,16 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   }
 
   try {
-    if (!requireJson(req)) {
-      return privateJson({ error: "Content-Type tidak valid" }, { status: 415 });
-    }
-
-    const body = await req.json();
+    const parsed = await readBoundedJson(req, 128 * 1024);
+    if (!parsed.ok) return parsed.response;
+    const body = parsed.value;
     const { category, title, username, email, password, pin, url, notes } = body;
     const cleanCategory = category === undefined ? undefined : safeText(category, 40);
     if (cleanCategory !== undefined && !isCategoryValue(cleanCategory)) {
       return privateJson({ error: "Kategori tidak valid" }, { status: 400 });
+    }
+    if (typeof password === "string" && password.length > 10_000) {
+      return privateJson({ error: "Password melebihi batas 10.000 karakter" }, { status: 400 });
     }
 
     const entry = await prisma.vaultEntry.update({

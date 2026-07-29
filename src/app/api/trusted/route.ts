@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
-import { privateJson, requireJson, safeText } from "@/lib/api-security";
+import { privateJson, readBoundedJson, safeText } from "@/lib/api-security";
 import {
   emergencyCodeHash,
   encryptContactData,
@@ -31,11 +31,9 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    if (!requireJson(req)) {
-      return privateJson({ error: "Content-Type tidak valid" }, { status: 415 });
-    }
-
-    const { name, email, phone, relation } = await req.json();
+    const parsed = await readBoundedJson(req, 8 * 1024);
+    if (!parsed.ok) return parsed.response;
+    const { name, email, phone, relation } = parsed.value;
     const cleanName = safeText(name, 100);
     const cleanEmail = safeText(email, 320).toLowerCase();
     const cleanPhone = safeText(phone, 40);

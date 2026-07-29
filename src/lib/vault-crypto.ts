@@ -26,3 +26,18 @@ export function publicVaultEntry(entry: VaultEntry) {
     updatedAt: entry.updatedAt,
   };
 }
+
+export function publicVaultSummary(entry: VaultEntry) {
+  return {
+    id: entry.id,
+    category: entry.category,
+    title: decrypt(entry.title, `${context("title")}:${entry.id}`),
+    username: entry.username ? decrypt(entry.username, `${context("username")}:${entry.id}`) : null,
+    email: entry.email ? decrypt(entry.email, `${context("email")}:${entry.id}`) : null,
+    hasPin: Boolean(entry.pin),
+    hasUrl: Boolean(entry.url),
+    hasNotes: Boolean(entry.notes),
+    createdAt: entry.createdAt,
+    updatedAt: entry.updatedAt,
+  };
+}

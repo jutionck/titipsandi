@@ -7,8 +7,9 @@ import {
   PASSKEY_CHALLENGE_COOKIE,
   verifyPasskeyChallenge,
 } from "@/lib/auth";
-import { privateJson, requireJson, safeText } from "@/lib/api-security";
+import { privateJson, readBoundedJson, requestClientIp, safeText } from "@/lib/api-security";
 import { prisma } from "@/lib/prisma";
+import { enforceRateLimits } from "@/lib/rate-limit";
 import { encodeTransports, getWebAuthnConfig } from "@/lib/webauthn";
 
 export async function POST(req: NextRequest) {
@@ -17,9 +18,24 @@ export async function POST(req: NextRequest) {
     if (!session) {
       return privateJson({ error: "Tidak terautentikasi" }, { status: 401 });
     }
-    if (!requireJson(req)) {
-      return privateJson({ error: "Content-Type tidak valid" }, { status: 415 });
-    }
+    const parsed = await readBoundedJson(req, 32 * 1024);
+    if (!parsed.ok) return parsed.response;
+
+    const rateLimitResponse = await enforceRateLimits([
+      {
+        scope: "passkey-register-verify-user",
+        identifier: session.userId,
+        limit: 10,
+        windowMs: 15 * 60 * 1000,
+      },
+      {
+        scope: "passkey-register-verify-ip",
+        identifier: requestClientIp(req),
+        limit: 20,
+        windowMs: 15 * 60 * 1000,
+      },
+    ]);
+    if (rateLimitResponse) return rateLimitResponse;
 
     const cookieStore = await cookies();
     const challengeToken = cookieStore.get(PASSKEY_CHALLENGE_COOKIE)?.value;
@@ -28,9 +44,8 @@ export async function POST(req: NextRequest) {
       return privateJson({ error: "Sesi pendaftaran passkey kedaluwarsa" }, { status: 400 });
     }
 
-    const body = await req.json();
-    const credentialResponse = body.response as RegistrationResponseJSON;
-    const name = safeText(body.name, 80) || "Perangkat pribadi";
+    const credentialResponse = parsed.value.response as RegistrationResponseJSON;
+    const name = safeText(parsed.value.name, 80) || "Perangkat pribadi";
     const { origin, rpID } = getWebAuthnConfig(req);
     const verification = await verifyRegistrationResponse({
       response: credentialResponse,

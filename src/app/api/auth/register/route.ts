@@ -3,16 +3,21 @@ import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
 import { setSessionCookie, signToken } from "@/lib/auth";
-import { PRIVATE_RESPONSE_HEADERS, privateJson, requireJson, safeText } from "@/lib/api-security";
+import {
+  PRIVATE_RESPONSE_HEADERS,
+  privateJson,
+  readBoundedJson,
+  requestClientIp,
+  safeText,
+} from "@/lib/api-security";
+import { enforceRateLimits } from "@/lib/rate-limit";
 import { emailIndex, encryptUserEmail, encryptUserName, normalizeEmail } from "@/lib/user-crypto";
 
 export async function POST(req: NextRequest) {
   try {
-    if (!requireJson(req)) {
-      return privateJson({ error: "Content-Type tidak valid" }, { status: 415 });
-    }
-
-    const { name, email, password } = await req.json();
+    const parsed = await readBoundedJson(req, 8 * 1024);
+    if (!parsed.ok) return parsed.response;
+    const { name, email, password } = parsed.value;
     const cleanName = safeText(name, 100);
     const normalizedEmail = typeof email === "string" ? normalizeEmail(email) : "";
 
@@ -23,6 +28,19 @@ export async function POST(req: NextRequest) {
     if (password.length < 12 || Buffer.byteLength(password, "utf8") > 72) {
       return privateJson({ error: "Password harus 12–72 byte" }, { status: 400 });
     }
+    if (Buffer.byteLength(normalizedEmail, "utf8") > 320) {
+      return privateJson({ error: "Email tidak valid" }, { status: 400 });
+    }
+
+    const rateLimitResponse = await enforceRateLimits([
+      {
+        scope: "register-ip",
+        identifier: requestClientIp(req),
+        limit: 5,
+        windowMs: 60 * 60 * 1000,
+      },
+    ]);
+    if (rateLimitResponse) return rateLimitResponse;
 
     const hash = emailIndex(normalizedEmail);
     const existing = await prisma.user.findUnique({

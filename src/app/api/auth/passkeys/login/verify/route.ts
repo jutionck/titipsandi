@@ -11,15 +11,25 @@ import {
   signToken,
   verifyPasskeyChallenge,
 } from "@/lib/auth";
-import { privateJson, requireJson } from "@/lib/api-security";
+import { privateJson, readBoundedJson, requestClientIp } from "@/lib/api-security";
 import { prisma } from "@/lib/prisma";
+import { enforceRateLimits } from "@/lib/rate-limit";
 import { decodeTransports, getWebAuthnConfig } from "@/lib/webauthn";
 
 export async function POST(req: NextRequest) {
   try {
-    if (!requireJson(req)) {
-      return privateJson({ error: "Content-Type tidak valid" }, { status: 415 });
-    }
+    const parsed = await readBoundedJson(req, 32 * 1024);
+    if (!parsed.ok) return parsed.response;
+
+    const rateLimitResponse = await enforceRateLimits([
+      {
+        scope: "passkey-verify-ip",
+        identifier: requestClientIp(req),
+        limit: 30,
+        windowMs: 15 * 60 * 1000,
+      },
+    ]);
+    if (rateLimitResponse) return rateLimitResponse;
 
     const cookieStore = await cookies();
     const challengeToken = cookieStore.get(PASSKEY_CHALLENGE_COOKIE)?.value;
@@ -28,8 +38,7 @@ export async function POST(req: NextRequest) {
       return privateJson({ error: "Sesi passkey kedaluwarsa" }, { status: 400 });
     }
 
-    const body = await req.json();
-    const credentialResponse = body.response as AuthenticationResponseJSON;
+    const credentialResponse = parsed.value.response as AuthenticationResponseJSON;
     const passkey = await prisma.passkey.findUnique({
       where: { id: credentialResponse?.id },
     });

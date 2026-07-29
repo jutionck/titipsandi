@@ -20,6 +20,24 @@ export default function PwaInstallBanner() {
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
 
   useEffect(() => {
+    if (!("serviceWorker" in navigator) || window.location.hostname === "localhost") return;
+
+    function registerServiceWorker() {
+      navigator.serviceWorker.register("/sw.js").catch(() => {
+        // PWA support is optional; registration failure must not block the vault.
+      });
+    }
+
+    if (document.readyState === "complete") {
+      registerServiceWorker();
+      return;
+    }
+
+    window.addEventListener("load", registerServiceWorker, { once: true });
+    return () => window.removeEventListener("load", registerServiceWorker);
+  }, []);
+
+  useEffect(() => {
     const navigatorWithStandalone = navigator as Navigator & {
       standalone?: boolean;
     };

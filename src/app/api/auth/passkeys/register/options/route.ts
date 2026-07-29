@@ -2,8 +2,9 @@ import { NextRequest } from "next/server";
 import { generateRegistrationOptions } from "@simplewebauthn/server";
 import bcrypt from "bcryptjs";
 import { getSession, setPasskeyChallengeCookie, signPasskeyChallenge } from "@/lib/auth";
-import { privateJson, requireJson } from "@/lib/api-security";
+import { privateJson, readBoundedJson, requestClientIp } from "@/lib/api-security";
 import { prisma } from "@/lib/prisma";
+import { enforceRateLimits } from "@/lib/rate-limit";
 import { decryptUserEmail, decryptUserName } from "@/lib/user-crypto";
 import { decodeTransports, getWebAuthnConfig, PASSKEY_RP_NAME } from "@/lib/webauthn";
 
@@ -12,11 +13,26 @@ export async function POST(req: NextRequest) {
   if (!session) {
     return privateJson({ error: "Tidak terautentikasi" }, { status: 401 });
   }
-  if (!requireJson(req)) {
-    return privateJson({ error: "Content-Type tidak valid" }, { status: 415 });
-  }
+  const parsed = await readBoundedJson(req, 8 * 1024);
+  if (!parsed.ok) return parsed.response;
 
-  const body = await req.json();
+  const rateLimitResponse = await enforceRateLimits([
+    {
+      scope: "passkey-register-ip",
+      identifier: requestClientIp(req),
+      limit: 20,
+      windowMs: 15 * 60 * 1000,
+    },
+    {
+      scope: "passkey-register-user",
+      identifier: session.userId,
+      limit: 10,
+      windowMs: 15 * 60 * 1000,
+    },
+  ]);
+  if (rateLimitResponse) return rateLimitResponse;
+
+  const masterPassword = parsed.value.masterPassword;
   const user = await prisma.user.findUnique({
     where: { id: session.userId },
     include: { passkeys: true },
@@ -25,8 +41,9 @@ export async function POST(req: NextRequest) {
     return privateJson({ error: "Pengguna tidak ditemukan" }, { status: 404 });
   }
   if (
-    typeof body.masterPassword !== "string" ||
-    !(await bcrypt.compare(body.masterPassword, user.passwordHash))
+    typeof masterPassword !== "string" ||
+    Buffer.byteLength(masterPassword, "utf8") > 72 ||
+    !(await bcrypt.compare(masterPassword, user.passwordHash))
   ) {
     return privateJson({ error: "Master Password tidak valid" }, { status: 401 });
   }

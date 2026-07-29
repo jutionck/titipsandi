@@ -29,11 +29,17 @@ interface VaultEntry {
   title: string;
   username: string | null;
   email: string | null;
+  hasPin: boolean;
+  hasUrl: boolean;
+  hasNotes: boolean;
+  updatedAt: string;
+}
+
+interface VaultSecret {
   password: string;
   pin: string | null;
   url: string | null;
   notes: string | null;
-  updatedAt: string;
 }
 
 function DashboardPageContent() {
@@ -46,6 +52,9 @@ function DashboardPageContent() {
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState<string>("");
   const [visiblePasswords, setVisiblePasswords] = useState<Set<string>>(new Set());
+  const [secretEntries, setSecretEntries] = useState<Record<string, VaultSecret>>({});
+  const [loadingSecrets, setLoadingSecrets] = useState<Set<string>>(new Set());
+  const [secretErrors, setSecretErrors] = useState<Set<string>>(new Set());
   const [copiedId, setCopiedId] = useState<string>("");
 
   const fetchEntries = useCallback(async () => {
@@ -86,7 +95,48 @@ function DashboardPageContent() {
     fetchEntries();
   }
 
-  function togglePassword(id: string) {
+  async function loadSecret(id: string) {
+    if (secretEntries[id]) return secretEntries[id];
+
+    setLoadingSecrets((current) => new Set(current).add(id));
+    setSecretErrors((current) => {
+      const next = new Set(current);
+      next.delete(id);
+      return next;
+    });
+
+    try {
+      const response = await fetch(`/api/vault/${id}`);
+      if (response.status === 401) {
+        router.push("/login");
+        return null;
+      }
+      if (!response.ok) throw new Error("Gagal memuat detail rahasia");
+
+      const data = await response.json();
+      const secret: VaultSecret = {
+        password: data.entry.password,
+        pin: data.entry.pin,
+        url: data.entry.url,
+        notes: data.entry.notes,
+      };
+      setSecretEntries((current) => ({ ...current, [id]: secret }));
+      return secret;
+    } catch {
+      setSecretErrors((current) => new Set(current).add(id));
+      return null;
+    } finally {
+      setLoadingSecrets((current) => {
+        const next = new Set(current);
+        next.delete(id);
+        return next;
+      });
+    }
+  }
+
+  async function togglePassword(id: string, entryId: string) {
+    if (!visiblePasswords.has(id) && !(await loadSecret(entryId))) return;
+
     setVisiblePasswords((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
@@ -99,6 +149,13 @@ function DashboardPageContent() {
     await navigator.clipboard.writeText(text);
     setCopiedId(id);
     setTimeout(() => setCopiedId(""), 2000);
+  }
+
+  async function copySecret(entryId: string, field: "password" | "pin", copiedKey: string) {
+    const secret = await loadSecret(entryId);
+    const value = secret?.[field];
+    if (!value) return;
+    await copyToClipboard(value, copiedKey);
   }
 
   const categoryCounts = entries.reduce<Record<string, number>>((acc, e) => {
@@ -345,11 +402,14 @@ function DashboardPageContent() {
                     <span className="text-gray-450 font-medium">Password</span>
                     <div className="flex items-center gap-2">
                       <span className="text-gray-900 font-mono font-bold tracking-wider">
-                        {visiblePasswords.has(entry.id) ? entry.password : "••••••••"}
+                        {visiblePasswords.has(entry.id)
+                          ? secretEntries[entry.id]?.password
+                          : "••••••••"}
                       </span>
                       <div className="flex items-center gap-0.5">
                         <button
-                          onClick={() => togglePassword(entry.id)}
+                          onClick={() => togglePassword(entry.id, entry.id)}
+                          disabled={loadingSecrets.has(entry.id)}
                           className="p-1 text-gray-400 hover:text-gray-600"
                         >
                           {visiblePasswords.has(entry.id) ? (
@@ -359,7 +419,8 @@ function DashboardPageContent() {
                           )}
                         </button>
                         <button
-                          onClick={() => copyToClipboard(entry.password, `pw-${entry.id}`)}
+                          onClick={() => copySecret(entry.id, "password", `pw-${entry.id}`)}
+                          disabled={loadingSecrets.has(entry.id)}
                           className="p-1 text-gray-400 hover:text-gray-600"
                         >
                           {copiedId === `pw-${entry.id}` ? (
@@ -372,16 +433,18 @@ function DashboardPageContent() {
                     </div>
                   </div>
 
-                  {entry.pin && (
+                  {entry.hasPin && secretEntries[entry.id]?.pin && (
                     <div className="flex items-center justify-between sm:justify-start gap-4 p-2 bg-gray-50/60 rounded-xl">
                       <span className="text-gray-450 font-medium">PIN</span>
                       <div className="flex items-center gap-2">
                         <span className="text-gray-900 font-mono font-bold tracking-wider">
-                          {visiblePasswords.has(`pin-${entry.id}`) ? entry.pin : "••••"}
+                          {visiblePasswords.has(`pin-${entry.id}`)
+                            ? secretEntries[entry.id]?.pin
+                            : "••••"}
                         </span>
                         <div className="flex items-center gap-0.5">
                           <button
-                            onClick={() => togglePassword(`pin-${entry.id}`)}
+                            onClick={() => togglePassword(`pin-${entry.id}`, entry.id)}
                             className="p-1 text-gray-400 hover:text-gray-600"
                           >
                             {visiblePasswords.has(`pin-${entry.id}`) ? (
@@ -391,7 +454,7 @@ function DashboardPageContent() {
                             )}
                           </button>
                           <button
-                            onClick={() => copyToClipboard(entry.pin!, `pin-${entry.id}`)}
+                            onClick={() => copySecret(entry.id, "pin", `pin-${entry.id}`)}
                             className="p-1 text-gray-400 hover:text-gray-600"
                           >
                             {copiedId === `pin-${entry.id}` ? (
@@ -406,11 +469,27 @@ function DashboardPageContent() {
                   )}
                 </div>
 
-                {(entry.url || entry.notes) && (
+                {secretErrors.has(entry.id) && (
+                  <p className="text-xs text-red-600">Detail rahasia gagal dimuat. Coba lagi.</p>
+                )}
+
+                {(entry.hasPin || entry.hasUrl || entry.hasNotes) && !secretEntries[entry.id] && (
+                  <div className="pt-3 border-t border-gray-100">
+                    <button
+                      onClick={() => loadSecret(entry.id)}
+                      disabled={loadingSecrets.has(entry.id)}
+                      className="text-xs font-semibold text-gray-600 hover:text-gray-900 disabled:text-gray-400"
+                    >
+                      {loadingSecrets.has(entry.id) ? "Memuat detail..." : "Lihat detail rahasia"}
+                    </button>
+                  </div>
+                )}
+
+                {(secretEntries[entry.id]?.url || secretEntries[entry.id]?.notes) && (
                   <div className="pt-3 border-t border-gray-100 flex flex-col gap-1.5 text-xs">
-                    {entry.url && (
+                    {secretEntries[entry.id]?.url && (
                       <a
-                        href={entry.url}
+                        href={secretEntries[entry.id].url!}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-1 text-blue-600 hover:underline font-semibold w-fit"
@@ -419,9 +498,9 @@ function DashboardPageContent() {
                         <ExternalLink className="w-3 h-3" />
                       </a>
                     )}
-                    {entry.notes && (
+                    {secretEntries[entry.id]?.notes && (
                       <div className="p-2.5 bg-gray-50 rounded-xl border border-gray-100 text-gray-500 leading-relaxed">
-                        {entry.notes}
+                        {secretEntries[entry.id].notes}
                       </div>
                     )}
                   </div>

@@ -13,9 +13,10 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
+    "test": "vitest run",
     "format": "prettier --write . --ignore-unknown",
     "format:check": "prettier --check . --ignore-unknown",
-    "check": "npm run lint && npm run typecheck && npm run db:validate",
+    "check": "npm run format:check && npm run lint && npm run typecheck && npm run test && npm run db:validate",
     "db:deploy": "prisma migrate deploy",
     "db:validate": "prisma validate"
   },
@@ -44,7 +45,8 @@
     "eslint-config-next": "16.2.12",
     "prettier": "^3.9.6",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.10"
   },
   "overrides": {
     "postcss": "8.5.24",

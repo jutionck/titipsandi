@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { getSession } from "@/lib/auth";
-import { privateJson, requireJson, safeText } from "@/lib/api-security";
+import { privateJson, readBoundedJson, safeText } from "@/lib/api-security";
 import { prisma } from "@/lib/prisma";
 
 export async function GET() {
@@ -29,12 +29,9 @@ export async function DELETE(req: NextRequest) {
   if (!session) {
     return privateJson({ error: "Tidak terautentikasi" }, { status: 401 });
   }
-  if (!requireJson(req)) {
-    return privateJson({ error: "Content-Type tidak valid" }, { status: 415 });
-  }
-
-  const body = await req.json();
-  const id = safeText(body.id, 1024);
+  const parsed = await readBoundedJson(req, 4 * 1024);
+  if (!parsed.ok) return parsed.response;
+  const id = safeText(parsed.value.id, 1024);
   if (!id) {
     return privateJson({ error: "Passkey tidak valid" }, { status: 400 });
   }

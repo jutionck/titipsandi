@@ -35,6 +35,10 @@ npm audit --omit=dev
 Perubahan schema harus menyertakan Prisma migration. Jangan mengubah migration
 yang sudah pernah dirilis; buat migration baru.
 
+Pull request dan push ke `main` menjalankan pemeriksaan yang sama melalui GitHub
+Actions, ditambah deployment migration ke PostgreSQL sementara dan integration
+test rate limiter. CI hanya memakai credential dummy dan database ephemeral.
+
 ## Pull request
 
 - Buat perubahan sekecil dan sefokus mungkin.

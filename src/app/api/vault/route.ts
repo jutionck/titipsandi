@@ -2,8 +2,8 @@ import { NextRequest } from "next/server";
 import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
-import { privateJson, requireJson, safeText } from "@/lib/api-security";
-import { encryptVaultField, publicVaultEntry } from "@/lib/vault-crypto";
+import { privateJson, readBoundedJson, safeText } from "@/lib/api-security";
+import { encryptVaultField, publicVaultSummary } from "@/lib/vault-crypto";
 import { isCategoryValue } from "@/lib/categories";
 
 export async function GET(req: NextRequest) {
@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
     orderBy: { updatedAt: "desc" },
   });
 
-  const publicEntries = entries.map(publicVaultEntry);
+  const publicEntries = entries.map(publicVaultSummary);
 
   let filteredEntries = publicEntries;
   if (search) {
@@ -47,11 +47,9 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    if (!requireJson(req)) {
-      return privateJson({ error: "Content-Type tidak valid" }, { status: 415 });
-    }
-
-    const body = await req.json();
+    const parsed = await readBoundedJson(req, 128 * 1024);
+    if (!parsed.ok) return parsed.response;
+    const body = parsed.value;
     const { category, title, username, email, password, pin, url, notes } = body;
     const cleanCategory = safeText(category, 40);
     const cleanTitle = safeText(title, 200);

@@ -1,5 +1,7 @@
 # TitipSandi
 
+[![CI](https://github.com/jutionck/titipsandi/actions/workflows/ci.yml/badge.svg)](https://github.com/jutionck/titipsandi/actions/workflows/ci.yml)
+
 TitipSandi adalah password vault dan mekanisme akses darurat keluarga yang
 bersifat open source dan dapat di-self-host.
 
@@ -24,6 +26,12 @@ bersifat open source dan dapat di-self-host.
 - Cookie sesi bersifat `HttpOnly`, `SameSite=Strict`, dan `Secure` di production.
 - Passkey memakai WebAuthn dengan verifikasi pengguna wajib. Biometrik dan PIN
   perangkat tidak pernah dikirim ke server; database hanya menyimpan public key.
+- Endpoint login, registrasi, passkey, dan akses darurat memakai rate limiter
+  PostgreSQL lintas-instance. Identifier bucket disimpan sebagai blind index,
+  bukan email, IP, atau kode darurat mentah.
+- CSP production memakai nonce unik per-request dan `strict-dynamic`; script
+  inline tanpa nonce ditolak. Konsekuensinya, halaman dirender dinamis agar
+  Next.js dapat menerapkan nonce pada script framework.
 - API dan halaman privat menggunakan `Cache-Control: no-store`; service worker
   tidak menyimpan halaman atau respons vault.
 - Supabase dipakai hanya sebagai PostgreSQL terkelola. Aplikasi tidak
@@ -105,14 +113,15 @@ Tambahkan environment variables berikut untuk Production:
 
 Jangan menyalin nilai production tersebut ke `.env.development.local`.
 Jika memakai Vercel Preview, gunakan project/database terpisah dari production.
-Jangan memasang nilai WebAuthn production pada Preview karena passkey terikat
-pada origin dan RP ID. Tanpa variabel tersebut, aplikasi memakai origin request.
-
-Jangan menyalin nilai production tersebut ke `.env.development.local`.
-Jika memakai Vercel Preview, gunakan project/database terpisah dari production.
+Jangan memasang nilai WebAuthn production pada Preview karena passkey terikat pada
+origin dan RP ID. Di production, endpoint passkey menolak berjalan bila kedua
+variabel WebAuthn kosong, origin bukan HTTPS, atau RP ID tidak cocok. Passkey pada
+Preview hanya dapat digunakan bila Preview memiliki domain stabil dan nilai
+WebAuthn khusus environment tersebut; tanpa itu, gunakan Master Password.
 
 Jalankan migration secara terkontrol dengan `npm run db:deploy` sebelum
-mengalihkan traffic. Build Vercel otomatis menjalankan `prisma generate`.
+mengalihkan traffic. Migration juga membuat tabel rate-limit yang diperlukan
+endpoint autentikasi. Build Vercel otomatis menjalankan `prisma generate`.
 
 Jangan memasukkan `.env`, connection string, token Supabase, atau hasil dump
 database ke Git. `.gitignore` sudah menolak seluruh `.env*` kecuali
@@ -157,11 +166,12 @@ Kerentanan keamanan harus dilaporkan secara privat sesuai
 - Enkripsi berlangsung di server, bukan di browser.
 - Akses darurat adalah bearer capability: siapa pun yang memiliki kode dapat
   membuka vault terkait.
-- Belum tersedia recovery key, rotasi kunci otomatis, session revocation,
-  rate limiter terdistribusi, audit log tahan-rusak, atau security audit
-  independen.
-- Untuk deployment publik, aktifkan rate limiting/WAF pada endpoint `/api/auth/*`
-  dan `/api/emergency` di depan aplikasi.
+- Belum tersedia recovery key, rotasi kunci otomatis, session revocation, audit
+  log tahan-rusak, atau security audit independen.
+- Rate limiter aplikasi mengurangi brute force, tetapi bukan perlindungan DDoS.
+  Untuk deployment publik, tetap aktifkan WAF dan pembatasan traffic di depan
+  endpoint `/api/auth/*` dan `/api/emergency`. Pastikan reverse proxy mengganti,
+  bukan meneruskan mentah, header `X-Forwarded-For` dari client.
 - Jangan menyatakan aplikasi “dijamin aman”, “zero knowledge”, atau
   “enkripsi lokal” sebelum arsitekturnya benar-benar mendukung klaim tersebut.
 

@@ -42,17 +42,17 @@ model VaultEntry {
 }
 
 model TrustedContact {
-  id           String   @id @default(uuid())
-  userId       String
-  name         String
-  email        String
-  phone        String?
-  relation     String
-  accessCodeHash String @unique
-  isActivated  Boolean  @default(false)
-  activatedAt  DateTime?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id             String    @id @default(uuid())
+  userId         String
+  name           String
+  email          String
+  phone          String?
+  relation       String
+  accessCodeHash String    @unique
+  isActivated    Boolean   @default(false)
+  activatedAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -75,4 +75,13 @@ model Passkey {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+model RateLimitBucket {
+  key         String   @id
+  count       Int
+  windowStart DateTime
+  expiresAt   DateTime
+
+  @@index([expiresAt])
 }

@@ -1,32 +1,9 @@
 import type { NextConfig } from "next";
 
-const scriptSources = [
-  "'self'",
-  "'unsafe-inline'",
-  ...(process.env.NODE_ENV === "development" ? ["'unsafe-eval'"] : []),
-].join(" ");
-
-const contentSecurityPolicy = [
-  "default-src 'self'",
-  "base-uri 'self'",
-  "frame-ancestors 'none'",
-  "form-action 'self'",
-  "object-src 'none'",
-  `script-src ${scriptSources}`,
-  "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob:",
-  "font-src 'self' data:",
-  "connect-src 'self'",
-  "manifest-src 'self'",
-  "worker-src 'self'",
-  "upgrade-insecure-requests",
-].join("; ");
-
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   async headers() {
     const securityHeaders = [
-      { key: "Content-Security-Policy", value: contentSecurityPolicy },
       { key: "Referrer-Policy", value: "no-referrer" },
       { key: "X-Content-Type-Options", value: "nosniff" },
       { key: "X-Frame-Options", value: "DENY" },

@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { privateJson, requireJson } from "@/lib/api-security";
+import { privateJson, readBoundedJson, requestClientIp } from "@/lib/api-security";
+import { enforceRateLimits } from "@/lib/rate-limit";
 import { decryptUserEmail, decryptUserName } from "@/lib/user-crypto";
 import {
   emergencyCodeHash,
@@ -11,16 +12,30 @@ import { publicVaultEntry } from "@/lib/vault-crypto";
 
 export async function POST(req: NextRequest) {
   try {
-    if (!requireJson(req)) {
-      return privateJson({ error: "Content-Type tidak valid" }, { status: 415 });
-    }
-
-    const { accessCode } = await req.json();
+    const parsed = await readBoundedJson(req, 2 * 1024);
+    if (!parsed.ok) return parsed.response;
+    const { accessCode } = parsed.value;
     const normalized = typeof accessCode === "string" ? normalizeEmergencyCode(accessCode) : "";
 
     if (!/^[A-F0-9]{32}$/.test(normalized)) {
       return privateJson({ error: "Kode akses tidak valid" }, { status: 400 });
     }
+
+    const rateLimitResponse = await enforceRateLimits([
+      {
+        scope: "emergency-ip",
+        identifier: requestClientIp(req),
+        limit: 20,
+        windowMs: 15 * 60 * 1000,
+      },
+      {
+        scope: "emergency-code",
+        identifier: normalized,
+        limit: 10,
+        windowMs: 15 * 60 * 1000,
+      },
+    ]);
+    if (rateLimitResponse) return rateLimitResponse;
 
     const contact = await prisma.trustedContact.findUnique({
       where: { accessCodeHash: emergencyCodeHash(normalized) },
