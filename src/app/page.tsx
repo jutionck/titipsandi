@@ -21,7 +21,7 @@ export default function HomePage() {
           </div>
         </div>
 
-        <div className="bg-white border border-gray-150 rounded-2xl p-5 shadow-sm space-y-4 text-left">
+        <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm space-y-4 text-left">
           <div className="flex gap-3 items-start">
             <div className="p-2 bg-gray-100 rounded-lg text-gray-700">
               <KeyRound className="w-5 h-5" />

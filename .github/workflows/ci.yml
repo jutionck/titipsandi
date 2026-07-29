@@ -44,6 +44,7 @@ jobs:
       ENCRYPTION_KEY: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
       ENCRYPTION_KEY_PREVIOUS: ""
       ENCRYPTION_WRITE_VERSION: v1
+      APP_ORIGIN: https://titipsandi.test
       WEBAUTHN_ORIGIN: https://titipsandi.test
       WEBAUTHN_RP_ID: titipsandi.test
 
@@ -78,6 +79,8 @@ jobs:
           npm run test --
           src/lib/rate-limit.integration.test.ts
           src/lib/key-rotation.integration.test.ts
+          src/lib/password-recovery.integration.test.ts
+          src/lib/email-verification.integration.test.ts
 
       - name: Audit production dependencies
         run: npm audit --omit=dev

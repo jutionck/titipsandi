@@ -4,6 +4,7 @@ import type { NextResponse } from "next/server";
 
 export const SESSION_COOKIE = "titipsandi_session";
 export const PASSKEY_CHALLENGE_COOKIE = "titipsandi_passkey_challenge";
+export const LOGIN_OTP_COOKIE = "titipsandi_login_otp";
 const TOKEN_ISSUER = "titipsandi.com";
 const TOKEN_AUDIENCE = "titipsandi-web";
 const PASSKEY_AUDIENCE = "titipsandi-passkey";
@@ -16,7 +17,7 @@ function getJwtSecret() {
   return new TextEncoder().encode(value);
 }
 
-export async function signToken(payload: { userId: string }) {
+export async function signToken(payload: { userId: string; sessionVersion: number }) {
   return new SignJWT(payload)
     .setProtectedHeader({ alg: "HS256" })
     .setIssuer(TOKEN_ISSUER)
@@ -33,6 +34,36 @@ export function setSessionCookie(response: NextResponse, token: string) {
     sameSite: "strict",
     maxAge: 60 * 60 * 12,
     path: "/",
+  });
+}
+
+export function clearSessionCookie(response: NextResponse) {
+  response.cookies.set(SESSION_COOKIE, "", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+    maxAge: 0,
+    path: "/",
+  });
+}
+
+export function setLoginOtpCookie(response: NextResponse, token: string) {
+  response.cookies.set(LOGIN_OTP_COOKIE, token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+    maxAge: 5 * 60,
+    path: "/api/auth/login/otp",
+  });
+}
+
+export function clearLoginOtpCookie(response: NextResponse) {
+  response.cookies.set(LOGIN_OTP_COOKIE, "", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+    maxAge: 0,
+    path: "/api/auth/login/otp",
   });
 }
 
@@ -101,7 +132,13 @@ export async function verifyToken(token: string) {
       audience: TOKEN_AUDIENCE,
     });
     if (typeof payload.userId !== "string") return null;
-    return { userId: payload.userId };
+    const sessionVersion =
+      typeof payload.sessionVersion === "number" &&
+      Number.isSafeInteger(payload.sessionVersion) &&
+      payload.sessionVersion >= 0
+        ? payload.sessionVersion
+        : 0;
+    return { userId: payload.userId, sessionVersion };
   } catch {
     return null;
   }
@@ -111,5 +148,15 @@ export async function getSession() {
   const cookieStore = await cookies();
   const token = cookieStore.get(SESSION_COOKIE)?.value;
   if (!token) return null;
-  return verifyToken(token);
+  const session = await verifyToken(token);
+  if (!session) return null;
+
+  const { prisma } = await import("@/lib/prisma");
+  const user = await prisma.user.findUnique({
+    where: { id: session.userId },
+    select: { sessionVersion: true, emailVerifiedAt: true },
+  });
+  if (!user?.emailVerifiedAt || user.sessionVersion !== session.sessionVersion) return null;
+
+  return session;
 }

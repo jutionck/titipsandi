@@ -1,18 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Shield, Lock, Mail, User, ArrowLeft, Eye, EyeOff } from "lucide-react";
 
 export default function RegisterPage() {
-  const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState("");
+  const [resending, setResending] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
@@ -40,11 +40,32 @@ export default function RegisterPage() {
         return;
       }
 
-      router.push("/dashboard");
+      setPassword("");
+      setConfirmPassword("");
+      setSuccess(data.message);
     } catch {
       setError("Gagal terhubung ke server");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function resendVerification() {
+    setResending(true);
+    setError("");
+    try {
+      const response = await fetch("/api/auth/email/resend", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const result = await response.json();
+      if (!response.ok) setError(result.error);
+      else setSuccess(result.message);
+    } catch {
+      setError("Gagal terhubung ke server");
+    } finally {
+      setResending(false);
     }
   }
 
@@ -69,8 +90,21 @@ export default function RegisterPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {success && (
+            <div className="space-y-3 rounded-xl border border-green-200 bg-green-50 p-4 text-xs font-medium text-green-800">
+              <p>{success}</p>
+              <button
+                type="button"
+                onClick={resendVerification}
+                disabled={resending}
+                className="font-bold underline disabled:opacity-50"
+              >
+                {resending ? "Mengirim..." : "Kirim ulang tautan"}
+              </button>
+            </div>
+          )}
           {error && (
-            <div className="p-3 bg-red-50 border border-red-200 text-red-755 text-xs font-medium rounded-xl">
+            <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs font-medium rounded-xl">
               {error}
             </div>
           )}
@@ -172,10 +206,10 @@ export default function RegisterPage() {
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || Boolean(success)}
             className="w-full py-3 bg-gray-900 text-white rounded-xl font-semibold text-sm hover:bg-gray-800 active:scale-[0.99] transition disabled:opacity-50 shadow-md shadow-gray-900/10"
           >
-            {loading ? "Memproses..." : "Daftar"}
+            {loading ? "Memproses..." : success ? "Akun Menunggu Verifikasi" : "Daftar"}
           </button>
         </form>
 

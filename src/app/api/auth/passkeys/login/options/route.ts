@@ -35,6 +35,7 @@ export async function POST(req: NextRequest) {
   const user = indexes
     ? await prisma.user.findFirst({
         where: {
+          emailVerifiedAt: { not: null },
           OR: [{ emailHash: { in: indexes.legacy } }, { emailHashV2: { in: indexes.derived } }],
         },
         include: { passkeys: true },

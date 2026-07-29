@@ -41,8 +41,13 @@ export async function POST(req: NextRequest) {
     const credentialResponse = parsed.value.response as AuthenticationResponseJSON;
     const passkey = await prisma.passkey.findUnique({
       where: { id: credentialResponse?.id },
+      include: { user: { select: { sessionVersion: true, emailVerifiedAt: true } } },
     });
-    if (!passkey || (challenge.userId && passkey.userId !== challenge.userId)) {
+    if (
+      !passkey ||
+      !passkey.user.emailVerifiedAt ||
+      (challenge.userId && passkey.userId !== challenge.userId)
+    ) {
       return privateJson({ error: "Passkey tidak dikenal" }, { status: 400 });
     }
 
@@ -72,7 +77,10 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    const token = await signToken({ userId: passkey.userId });
+    const token = await signToken({
+      userId: passkey.userId,
+      sessionVersion: passkey.user.sessionVersion,
+    });
     const response = privateJson({ success: true });
     setSessionCookie(response, token);
     clearPasskeyChallengeCookie(response);

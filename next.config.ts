@@ -23,7 +23,8 @@ const nextConfig: NextConfig = {
         headers: securityHeaders,
       },
       {
-        source: "/(dashboard|trusted|vault|emergency|login|register)/:path*",
+        source:
+          "/(dashboard|trusted|vault|emergency|login|register|verify-email|forgot-password|recover)/:path*",
         headers: [
           { key: "Cache-Control", value: "private, no-store, max-age=0" },
           { key: "X-Robots-Tag", value: "noindex, nofollow" },

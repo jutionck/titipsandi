@@ -1,15 +1,10 @@
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest } from "next/server";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
-import { setSessionCookie, signToken } from "@/lib/auth";
-import {
-  PRIVATE_RESPONSE_HEADERS,
-  privateJson,
-  readBoundedJson,
-  requestClientIp,
-  safeText,
-} from "@/lib/api-security";
+import { sendEmailVerificationEmail } from "@/lib/email";
+import { createEmailVerificationToken, emailVerificationUrl } from "@/lib/email-verification";
+import { privateJson, readBoundedJson, requestClientIp, safeText } from "@/lib/api-security";
 import { enforceRateLimits } from "@/lib/rate-limit";
 import {
   emailIndexCandidates,
@@ -60,6 +55,7 @@ export async function POST(req: NextRequest) {
 
     const passwordHash = await bcrypt.hash(password, 12);
     const userId = crypto.randomUUID();
+    const generated = createEmailVerificationToken();
     const user = await prisma.user.create({
       data: {
         id: userId,
@@ -68,21 +64,38 @@ export async function POST(req: NextRequest) {
         emailHash: legacyEmailIndex(normalizedEmail),
         emailHashV2: indexes.current,
         passwordHash,
+        emailVerificationTokens: {
+          create: {
+            tokenHash: generated.tokenHash,
+            expiresAt: generated.expiresAt,
+          },
+        },
       },
+      select: { id: true, email: true, emailVerificationTokens: { select: { id: true } } },
     });
 
-    const token = await signToken({ userId: user.id });
+    const verificationTokenId = user.emailVerificationTokens[0]?.id;
+    after(async () => {
+      try {
+        await sendEmailVerificationEmail(normalizedEmail, emailVerificationUrl(generated.token));
+      } catch {
+        if (verificationTokenId) {
+          await prisma.emailVerificationToken.deleteMany({
+            where: { id: verificationTokenId },
+          });
+        }
+        console.error("Pengiriman email verifikasi gagal.");
+      }
+    });
 
-    const response = NextResponse.json(
+    return privateJson(
       {
         success: true,
-        user: { id: user.id, name: cleanName, email: normalizedEmail },
+        requiresEmailVerification: true,
+        message: "Akun dibuat. Periksa email untuk mengaktifkan akun sebelum login.",
       },
-      { headers: PRIVATE_RESPONSE_HEADERS },
+      { status: 201 },
     );
-    setSessionCookie(response, token);
-
-    return response;
   } catch {
     return privateJson({ error: "Terjadi kesalahan server" }, { status: 500 });
   }

@@ -41,6 +41,7 @@ export default function TrustedContactsPage() {
   const [error, setError] = useState("");
   const [copiedId, setCopiedId] = useState("");
   const [emergencyCode, setEmergencyCode] = useState("");
+  const [invitationRecipient, setInvitationRecipient] = useState("");
   const [isRelationOpen, setIsRelationOpen] = useState(false);
 
   const [form, setForm] = useState({
@@ -98,6 +99,7 @@ export default function TrustedContactsPage() {
       }
 
       setEmergencyCode(data.emergencyCode);
+      setInvitationRecipient(data.invitationRecipient || data.contact.email);
       setForm({ name: "", email: "", phone: "", relation: "" });
       setShowForm(false);
       fetchContacts();
@@ -142,7 +144,7 @@ export default function TrustedContactsPage() {
             </Link>
             <Link
               href="/trusted"
-              className="text-xs font-bold text-gray-900 hover:text-gray-955 flex items-center gap-1"
+              className="text-xs font-bold text-gray-900 hover:text-gray-900 flex items-center gap-1"
             >
               <Users className="w-3.5 h-3.5" />
               Kontak Darurat
@@ -189,6 +191,13 @@ export default function TrustedContactsPage() {
                 Demi keamanan, server hanya menyimpan hash dan tidak dapat menampilkan kode ini
                 lagi.
               </p>
+              {invitationRecipient && (
+                <p className="text-xs text-red-700 mt-1">
+                  Email pemberitahuan sedang dikirim ke{" "}
+                  <strong className="font-bold">{invitationRecipient}</strong>. Kode darurat tidak
+                  disertakan dan tetap harus Anda bagikan melalui kanal yang aman.
+                </p>
+              )}
             </div>
             <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
               <code className="flex-1 p-3 bg-white border border-red-200 rounded-xl font-mono text-sm font-bold tracking-wider break-all select-text">
@@ -208,7 +217,10 @@ export default function TrustedContactsPage() {
               </button>
               <button
                 type="button"
-                onClick={() => setEmergencyCode("")}
+                onClick={() => {
+                  setEmergencyCode("");
+                  setInvitationRecipient("");
+                }}
                 className="px-4 py-3 border border-red-200 text-red-700 rounded-xl text-xs font-semibold"
               >
                 Sudah disimpan
@@ -236,7 +248,7 @@ export default function TrustedContactsPage() {
             className="bg-white border border-gray-200 rounded-2xl p-4 sm:p-5 space-y-4 shadow-sm"
           >
             {error && (
-              <div className="p-3 bg-red-50 border border-red-200 text-red-750 text-xs font-medium rounded-xl">
+              <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs font-medium rounded-xl">
                 {error}
               </div>
             )}
@@ -373,7 +385,7 @@ export default function TrustedContactsPage() {
                   </div>
                   <button
                     onClick={() => handleDelete(contact.id)}
-                    className="p-1.5 text-gray-400 hover:text-red-650 hover:bg-red-50 rounded-lg transition"
+                    className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>

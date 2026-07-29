@@ -1,20 +1,12 @@
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { setSessionCookie, signToken } from "@/lib/auth";
-import {
-  PRIVATE_RESPONSE_HEADERS,
-  privateJson,
-  readBoundedJson,
-  requestClientIp,
-} from "@/lib/api-security";
+import { setLoginOtpCookie } from "@/lib/auth";
+import { privateJson, readBoundedJson, requestClientIp } from "@/lib/api-security";
+import { sendLoginOtpEmail } from "@/lib/email";
+import { createLoginOtpChallenge, maskEmail } from "@/lib/login-otp";
 import { clearRateLimits, enforceRateLimits } from "@/lib/rate-limit";
-import {
-  decryptUserEmail,
-  decryptUserName,
-  emailIndexCandidates,
-  normalizeEmail,
-} from "@/lib/user-crypto";
+import { decryptUserEmail, emailIndexCandidates, normalizeEmail } from "@/lib/user-crypto";
 
 export async function POST(req: NextRequest) {
   try {
@@ -61,6 +53,12 @@ export async function POST(req: NextRequest) {
     if (!valid) {
       return privateJson({ error: "Email atau password salah" }, { status: 401 });
     }
+    if (!user.emailVerifiedAt) {
+      return privateJson(
+        { error: "Email belum diverifikasi. Periksa inbox atau kirim ulang tautan." },
+        { status: 403 },
+      );
+    }
 
     if (user.emailHashV2 !== indexes.current) {
       await prisma.user.update({
@@ -69,21 +67,58 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const token = await signToken({ userId: user.id });
+    const otpRateLimitResponse = await enforceRateLimits([
+      {
+        scope: "login-otp-issue-ip",
+        identifier: requestClientIp(req),
+        limit: 10,
+        windowMs: 15 * 60 * 1000,
+      },
+      {
+        scope: "login-otp-issue-user",
+        identifier: user.id,
+        limit: 5,
+        windowMs: 15 * 60 * 1000,
+      },
+    ]);
+    if (otpRateLimitResponse) return otpRateLimitResponse;
+
+    const generated = createLoginOtpChallenge();
+    const challenge = await prisma.$transaction(async (tx) => {
+      await tx.loginOtpChallenge.deleteMany({ where: { userId: user.id } });
+      return tx.loginOtpChallenge.create({
+        data: {
+          userId: user.id,
+          tokenHash: generated.tokenHash,
+          codeHash: generated.codeHash,
+          expiresAt: generated.expiresAt,
+        },
+        select: { id: true },
+      });
+    });
+
+    const recipient = decryptUserEmail(user.email, user.id);
     await clearRateLimits(rateLimitPolicies);
 
-    const response = NextResponse.json(
+    after(async () => {
+      try {
+        await sendLoginOtpEmail(recipient, generated.code);
+      } catch {
+        await prisma.loginOtpChallenge.deleteMany({ where: { id: challenge.id } });
+        console.error("Pengiriman OTP login gagal.");
+      }
+    });
+
+    const response = privateJson(
       {
         success: true,
-        user: {
-          id: user.id,
-          name: decryptUserName(user.name, user.id),
-          email: decryptUserEmail(user.email, user.id),
-        },
+        requiresOtp: true,
+        maskedEmail: maskEmail(recipient),
+        message: "Kode OTP telah dikirim ke email Anda.",
       },
-      { headers: PRIVATE_RESPONSE_HEADERS },
+      { status: 202 },
     );
-    setSessionCookie(response, token);
+    setLoginOtpCookie(response, generated.token);
 
     return response;
   } catch {

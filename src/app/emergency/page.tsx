@@ -93,7 +93,7 @@ export default function EmergencyPage() {
 
         <div className="max-w-sm w-full mx-auto space-y-6">
           <div className="text-center space-y-3">
-            <div className="mx-auto w-12 h-12 bg-red-650/10 text-red-600 rounded-xl flex items-center justify-center border border-red-200">
+            <div className="mx-auto w-12 h-12 bg-red-600/10 text-red-600 rounded-xl flex items-center justify-center border border-red-200">
               <ShieldAlert className="w-6 h-6" />
             </div>
             <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Akses Darurat</h1>
@@ -105,7 +105,7 @@ export default function EmergencyPage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
-              <div className="p-3 bg-red-50 border border-red-200 text-red-750 text-xs font-medium rounded-xl">
+              <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs font-medium rounded-xl">
                 {error}
               </div>
             )}

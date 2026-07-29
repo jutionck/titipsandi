@@ -107,7 +107,7 @@ export default function LogoutButton({
               <div className="space-y-1">
                 <p
                   id="logout-dialog-description"
-                  className="text-xs font-semibold leading-relaxed text-gray-650"
+                  className="text-xs font-semibold leading-relaxed text-gray-600"
                 >
                   Apakah Anda yakin ingin keluar dari aplikasi TitipSandi?
                 </p>
@@ -122,7 +122,7 @@ export default function LogoutButton({
                   type="button"
                   onClick={handleLogout}
                   disabled={isLoggingOut}
-                  className="flex-1 cursor-pointer rounded-xl bg-red-600 py-2.5 text-xs font-bold text-white transition hover:bg-red-750 disabled:cursor-wait disabled:opacity-60"
+                  className="flex-1 cursor-pointer rounded-xl bg-red-600 py-2.5 text-xs font-bold text-white transition hover:bg-red-700 disabled:cursor-wait disabled:opacity-60"
                 >
                   {isLoggingOut ? "Sedang keluar..." : "Ya, Keluar"}
                 </button>

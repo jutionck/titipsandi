@@ -61,12 +61,12 @@ export default function InfoPage() {
             </Link>
             <Link
               href="/info"
-              className="text-xs font-bold text-gray-900 hover:text-gray-950 flex items-center gap-1"
+              className="text-xs font-bold text-gray-900 hover:text-gray-900 flex items-center gap-1"
             >
               <Info className="w-3.5 h-3.5" />
               Informasi
             </Link>
-            <LogoutButton className="text-xs font-bold text-red-650 hover:text-red-750 flex items-center gap-1 cursor-pointer" />
+            <LogoutButton className="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1 cursor-pointer" />
           </div>
 
           <span className="sm:hidden text-[10px] font-bold text-gray-400 uppercase tracking-widest bg-gray-100 py-1 px-2.5 rounded-full">
@@ -179,7 +179,7 @@ export default function InfoPage() {
                     href={`https://wa.me/${developerWhatsApp}?text=${encodeURIComponent("Halo, saya ingin memberikan feedback untuk TitipSandi")}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 border border-gray-150 rounded-xl transition text-xs font-semibold text-gray-700"
+                    className="flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl transition text-xs font-semibold text-gray-700"
                   >
                     <span className="flex items-center gap-2">
                       <MessageSquare className="w-4 h-4 text-green-550" />
@@ -192,10 +192,10 @@ export default function InfoPage() {
                 {developerEmail && (
                   <a
                     href={`mailto:${developerEmail}?subject=Feedback%20TitipSandi`}
-                    className="flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 border border-gray-150 rounded-xl transition text-xs font-semibold text-gray-700"
+                    className="flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl transition text-xs font-semibold text-gray-700"
                   >
                     <span className="flex items-center gap-2">
-                      <Mail className="w-4 h-4 text-blue-550" />
+                      <Mail className="w-4 h-4 text-blue-600" />
                       Email Maintainer
                     </span>
                     <ExternalLink className="w-3.5 h-3.5 opacity-65" />

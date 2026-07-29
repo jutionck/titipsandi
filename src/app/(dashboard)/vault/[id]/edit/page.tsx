@@ -134,7 +134,7 @@ export default function EditVaultEntryPage({ params }: { params: Promise<{ id: s
               <Info className="w-3.5 h-3.5" />
               Informasi
             </Link>
-            <LogoutButton className="text-xs font-bold text-red-650 hover:text-red-750 flex items-center gap-1 cursor-pointer" />
+            <LogoutButton className="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1 cursor-pointer" />
           </div>
 
           {/* Mobile Back Button */}

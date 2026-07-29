@@ -24,7 +24,14 @@ export async function proxy(req: NextRequest) {
     return response;
   }
 
-  const publicPaths = ["/login", "/register", "/emergency"];
+  const publicPaths = [
+    "/login",
+    "/register",
+    "/verify-email",
+    "/forgot-password",
+    "/recover",
+    "/emergency",
+  ];
   const isPublic = publicPaths.some((p) => pathname.startsWith(p));
   const isApi = pathname.startsWith("/api");
   const isPublicAsset =

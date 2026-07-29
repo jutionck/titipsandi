@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, Suspense } from "react";
+import { useEffect, useState, useCallback, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { CATEGORIES } from "@/lib/categories";
@@ -56,6 +56,10 @@ function DashboardPageContent() {
   const [loadingSecrets, setLoadingSecrets] = useState<Set<string>>(new Set());
   const [secretErrors, setSecretErrors] = useState<Set<string>>(new Set());
   const [copiedId, setCopiedId] = useState<string>("");
+  const [deleteTarget, setDeleteTarget] = useState<VaultEntry | null>(null);
+  const [deletingId, setDeletingId] = useState("");
+  const [deleteError, setDeleteError] = useState("");
+  const deleteCancelRef = useRef<HTMLButtonElement>(null);
 
   const fetchEntries = useCallback(async () => {
     try {
@@ -89,10 +93,47 @@ function DashboardPageContent() {
     };
   }, [fetchEntries]);
 
-  async function handleDelete(id: string) {
-    if (!confirm("Yakin ingin menghapus entry ini?")) return;
-    await fetch(`/api/vault/${id}`, { method: "DELETE" });
-    fetchEntries();
+  useEffect(() => {
+    if (!deleteTarget) return;
+    deleteCancelRef.current?.focus();
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !deletingId) {
+        setDeleteTarget(null);
+        setDeleteError("");
+      }
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [deleteTarget, deletingId]);
+
+  function requestDelete(entry: VaultEntry) {
+    setDeleteError("");
+    setDeleteTarget(entry);
+  }
+
+  async function confirmDelete() {
+    if (!deleteTarget) return;
+    setDeleteError("");
+    setDeletingId(deleteTarget.id);
+    try {
+      const response = await fetch(`/api/vault/${deleteTarget.id}`, { method: "DELETE" });
+      if (response.status === 401) {
+        router.push("/login");
+        return;
+      }
+      if (!response.ok) {
+        const result = await response.json();
+        throw new Error(result.error || "Entry belum dapat dihapus.");
+      }
+      setEntries((current) => current.filter((entry) => entry.id !== deleteTarget.id));
+      setDeleteTarget(null);
+    } catch (caughtError) {
+      setDeleteError(
+        caughtError instanceof Error ? caughtError.message : "Entry belum dapat dihapus.",
+      );
+    } finally {
+      setDeletingId("");
+    }
   }
 
   async function loadSecret(id: string) {
@@ -185,7 +226,7 @@ function DashboardPageContent() {
           <div className="hidden sm:flex items-center gap-4">
             <Link
               href="/dashboard"
-              className="text-xs font-bold text-gray-900 hover:text-gray-650 flex items-center gap-1"
+              className="text-xs font-bold text-gray-900 hover:text-gray-600 flex items-center gap-1"
             >
               <Shield className="w-3.5 h-3.5" />
               Vault
@@ -253,7 +294,7 @@ function DashboardPageContent() {
             </div>
             <button
               onClick={() => setActiveCategory("")}
-              className="text-xs font-bold text-red-650 hover:underline flex items-center gap-0.5"
+              className="text-xs font-bold text-red-600 hover:underline flex items-center gap-0.5"
             >
               <X className="w-3.5 h-3.5" /> Hapus
             </button>
@@ -348,9 +389,10 @@ function DashboardPageContent() {
                       <Edit3 className="w-4 h-4" />
                     </Link>
                     <button
-                      onClick={() => handleDelete(entry.id)}
+                      onClick={() => requestDelete(entry)}
                       className="p-2 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-55/40 transition"
                       title="Hapus"
+                      aria-label={`Hapus ${entry.title}`}
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -510,6 +552,74 @@ function DashboardPageContent() {
           </div>
         )}
       </main>
+
+      {deleteTarget && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/55 p-4 backdrop-blur-sm"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget && !deletingId) {
+              setDeleteTarget(null);
+              setDeleteError("");
+            }
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-vault-title"
+            aria-describedby="delete-vault-description"
+            className="w-full max-w-sm rounded-2xl border border-gray-200 bg-white p-5 shadow-2xl"
+          >
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-50 text-red-600">
+                <Trash2 className="h-5 w-5" />
+              </div>
+              <div className="min-w-0">
+                <h2 id="delete-vault-title" className="text-base font-bold text-gray-900">
+                  Hapus entry vault?
+                </h2>
+                <p
+                  id="delete-vault-description"
+                  className="mt-1 text-xs leading-relaxed text-gray-600"
+                >
+                  <strong className="font-bold text-gray-900">{deleteTarget.title}</strong> akan
+                  dihapus permanen beserta password dan informasi terkait. Tindakan ini tidak dapat
+                  dibatalkan.
+                </p>
+              </div>
+            </div>
+
+            {deleteError && (
+              <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-medium text-red-700">
+                {deleteError}
+              </div>
+            )}
+
+            <div className="mt-5 grid grid-cols-2 gap-2">
+              <button
+                ref={deleteCancelRef}
+                type="button"
+                onClick={() => {
+                  setDeleteTarget(null);
+                  setDeleteError("");
+                }}
+                disabled={Boolean(deletingId)}
+                className="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 disabled:opacity-50"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={confirmDelete}
+                disabled={Boolean(deletingId)}
+                className="rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-red-700 disabled:opacity-50"
+              >
+                {deletingId ? "Menghapus..." : "Ya, hapus"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <BottomNav />
 
       {/* Mobile Bottom Sheet for Categories */}

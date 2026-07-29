@@ -13,7 +13,7 @@ export default function BottomNav() {
         <Link
           href="/dashboard"
           className={`flex flex-col items-center gap-1 py-1 px-2.5 rounded-xl transition ${
-            pathname === "/dashboard" ? "text-gray-900" : "text-gray-400 hover:text-gray-650"
+            pathname === "/dashboard" ? "text-gray-900" : "text-gray-400 hover:text-gray-600"
           }`}
         >
           <Shield className="w-5.5 h-5.5" />
@@ -38,7 +38,7 @@ export default function BottomNav() {
         <Link
           href="/trusted"
           className={`flex flex-col items-center gap-1 py-1 px-2.5 rounded-xl transition ${
-            pathname === "/trusted" ? "text-gray-900" : "text-gray-400 hover:text-gray-650"
+            pathname === "/trusted" ? "text-gray-900" : "text-gray-400 hover:text-gray-600"
           }`}
         >
           <Users className="w-5.5 h-5.5" />
@@ -48,7 +48,7 @@ export default function BottomNav() {
         <Link
           href="/info"
           className={`flex flex-col items-center gap-1 py-1 px-2.5 rounded-xl transition ${
-            pathname === "/info" ? "text-gray-900" : "text-gray-400 hover:text-gray-650"
+            pathname === "/info" ? "text-gray-900" : "text-gray-400 hover:text-gray-600"
           }`}
         >
           <Info className="w-5.5 h-5.5" />

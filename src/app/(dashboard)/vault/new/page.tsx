@@ -83,7 +83,7 @@ export default function NewVaultEntryPage() {
             </Link>
             <Link
               href="/vault/new"
-              className="text-xs font-bold text-gray-900 hover:text-gray-955 flex items-center gap-1"
+              className="text-xs font-bold text-gray-900 hover:text-gray-900 flex items-center gap-1"
             >
               <Plus className="w-3.5 h-3.5" />
               Tambah
@@ -95,7 +95,7 @@ export default function NewVaultEntryPage() {
               <Info className="w-3.5 h-3.5" />
               Informasi
             </Link>
-            <LogoutButton className="text-xs font-bold text-red-650 hover:text-red-750 flex items-center gap-1 cursor-pointer" />
+            <LogoutButton className="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1 cursor-pointer" />
           </div>
 
           {/* Mobile Back Button */}
@@ -112,7 +112,7 @@ export default function NewVaultEntryPage() {
         <div className="max-w-2xl mx-auto">
           <form onSubmit={handleSubmit} className="space-y-5">
             {error && (
-              <div className="p-3 bg-red-50 border border-red-200 text-red-750 text-xs font-medium rounded-xl">
+              <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs font-medium rounded-xl">
                 {error}
               </div>
             )}
