@@ -15,6 +15,8 @@ bersifat open source dan dapat di-self-host.
 - Passkey WebAuthn dengan verifikasi pengguna.
 - Manajemen sesi per perangkat dan pencabutan sesi jarak jauh.
 - Riwayat aktivitas keamanan untuk peristiwa akun penting.
+- Analisis kesehatan password lokal untuk mendeteksi password lemah, digunakan
+  ulang, dan entry yang perlu ditinjau.
 
 > [!IMPORTANT]
 > Belum ada perangkat lunak yang dapat menjamin kerahasiaan secara absolut.
@@ -55,6 +57,10 @@ bersifat open source dan dapat di-self-host.
 - Login, perubahan password, perubahan kontak tepercaya, pengelolaan TOTP dan
   sesi, serta akses darurat dicatat dalam riwayat aktivitas keamanan tanpa
   menyimpan secret atau plaintext vault.
+- Kesehatan password dihitung setelah vault dibuka. Password, skor, dan daftar
+  temuan tidak dikirim atau disimpan di server. Waktu perubahan password berada
+  di dalam payload terenkripsi; entry lama memakai waktu pembuatan sebagai
+  fallback.
 - Endpoint login, registrasi, passkey, dan akses darurat memakai rate limiter
   PostgreSQL lintas-instance. Identifier bucket disimpan sebagai blind index,
   bukan email, IP, atau kode darurat mentah.
@@ -303,6 +309,8 @@ Kerentanan keamanan harus dilaporkan secara privat sesuai
   halaman Keamanan.
 - Opsi mengingat vault dalam satu tab memperpanjang waktu vault key tersedia
   bagi JavaScript pada origin aplikasi. Jangan aktifkan pada perangkat bersama.
+- Analisis kesehatan password bersifat heuristik. Status “Baik” bukan jaminan
+  password belum pernah bocor.
 - Export/backup vault terenkripsi dan prosedur restore yang teruji belum
   tersedia pada release ini.
 - Rate limiter aplikasi mengurangi brute force, tetapi bukan perlindungan DDoS.

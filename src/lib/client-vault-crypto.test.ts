@@ -25,6 +25,7 @@ const payload: ClientVaultPayload = {
   username: "jution",
   email: "jution@example.com",
   password: "sangat-rahasia",
+  passwordUpdatedAt: "2026-07-30T00:00:00.000Z",
   pin: null,
   url: "https://example.com",
   notes: "Hanya untuk pengujian",
@@ -121,6 +122,28 @@ describe("client vault crypto", () => {
     await expect(decryptClientVaultPayload(vaultKey, userId, entryId, encrypted)).rejects.toThrow(
       "Payload vault tidak valid.",
     );
+  });
+
+  it("menerima entry lama tanpa tanggal password dan menolak tanggal yang tidak valid", async () => {
+    const { vaultKey } = await createProtectedVaultKey(password, userId);
+    const legacyPayload = { ...payload, passwordUpdatedAt: undefined };
+    const legacyEncrypted = await encryptClientVaultPayload(
+      vaultKey,
+      userId,
+      entryId,
+      legacyPayload,
+    );
+    const invalidEncrypted = await encryptClientVaultPayload(vaultKey, userId, entryId, {
+      ...payload,
+      passwordUpdatedAt: "kemarin",
+    } as ClientVaultPayload);
+
+    await expect(
+      decryptClientVaultPayload(vaultKey, userId, entryId, legacyEncrypted),
+    ).resolves.toMatchObject({ password: payload.password });
+    await expect(
+      decryptClientVaultPayload(vaultKey, userId, entryId, invalidEncrypted),
+    ).rejects.toThrow("Payload vault tidak valid.");
   });
 
   it("menggunakan salt dan IV baru untuk setiap pembuatan", async () => {

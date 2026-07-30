@@ -37,6 +37,7 @@ export type ClientVaultPayload = {
   username: string | null;
   email: string | null;
   password: string;
+  passwordUpdatedAt?: string;
   pin: string | null;
   url: string | null;
   notes: string | null;
@@ -127,6 +128,14 @@ function isNullableString(value: unknown): value is string | null {
   return value === null || typeof value === "string";
 }
 
+function isOptionalIsoDate(value: unknown) {
+  if (value === undefined) return true;
+  if (typeof value !== "string") return false;
+
+  const parsed = new Date(value);
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString() === value;
+}
+
 function isClientVaultPayload(value: unknown): value is ClientVaultPayload {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     return false;
@@ -140,6 +149,7 @@ function isClientVaultPayload(value: unknown): value is ClientVaultPayload {
     isNullableString(candidate.username) &&
     isNullableString(candidate.email) &&
     typeof candidate.password === "string" &&
+    isOptionalIsoDate(candidate.passwordUpdatedAt) &&
     isNullableString(candidate.pin) &&
     isNullableString(candidate.url) &&
     isNullableString(candidate.notes)

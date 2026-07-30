@@ -40,6 +40,9 @@ Perlindungan yang dituju:
   Saat refresh, aplikasi hanya memulihkannya setelah user ID pada sesi server
   cocok. Logout, sesi yang tidak valid, data storage rusak, dan penutupan tab
   menghapus atau mengakhiri akses terhadap salinan tersebut.
+- Analisis password lemah, penggunaan ulang, dan waktu review dilakukan hanya
+  di browser setelah vault dibuka. Hasil analisis tidak dikirim atau disimpan di
+  server. `passwordUpdatedAt` berada di dalam ciphertext entry.
 - Pengguna dapat mengganti OTP email dengan TOTP RFC 6238 dari aplikasi
   authenticator. Secret TOTP dienkripsi menggunakan application key. Sepuluh
   recovery code dibuat secara acak, hanya ditampilkan saat dibuat, disimpan
@@ -61,6 +64,9 @@ Di luar perlindungan saat ini:
 - JavaScript berbahaya yang disajikan dari origin aplikasi.
 - `sessionStorage` dapat dibaca JavaScript pada origin yang sama. Mengaktifkan
   opsi ingat-tab memperpanjang jendela risiko XSS sampai tab ditutup.
+- Analyzer password memakai heuristik dan blocklist lokal terbatas; hasil “Baik”
+  tidak membuktikan bahwa suatu password belum pernah terekspos dalam insiden
+  eksternal.
 - Perangkat pengguna, browser extension, clipboard, screenshot, dan phishing.
 - Pengambilalihan mailbox pengguna yang dapat menerima OTP login dan tautan
   pemulihan.

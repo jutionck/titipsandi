@@ -47,6 +47,7 @@ export default function NewVaultEntryPage() {
         username: form.username.trim() || null,
         email: form.email.trim() || null,
         password: form.password,
+        passwordUpdatedAt: new Date().toISOString(),
         pin: form.pin.trim() || null,
         url: form.url.trim() || null,
         notes: form.notes.trim() || null,

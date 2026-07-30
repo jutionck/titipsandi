@@ -21,6 +21,7 @@ export default function EditVaultEntryPage({ params }: { params: Promise<{ id: s
   const [fetching, setFetching] = useState(true);
   const [error, setError] = useState("");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [initialPassword, setInitialPassword] = useState("");
 
   const [form, setForm] = useState({
     category: "",
@@ -28,6 +29,7 @@ export default function EditVaultEntryPage({ params }: { params: Promise<{ id: s
     username: "",
     email: "",
     password: "",
+    passwordUpdatedAt: "",
     pin: "",
     url: "",
     notes: "",
@@ -55,10 +57,12 @@ export default function EditVaultEntryPage({ params }: { params: Promise<{ id: s
           username: e.username || "",
           email: e.email || "",
           password: e.password || "",
+          passwordUpdatedAt: e.passwordUpdatedAt || data.entry.createdAt || "",
           pin: e.pin || "",
           url: e.url || "",
           notes: e.notes || "",
         });
+        setInitialPassword(e.password || "");
       } catch {
         router.push("/dashboard");
       } finally {
@@ -87,6 +91,10 @@ export default function EditVaultEntryPage({ params }: { params: Promise<{ id: s
         username: form.username.trim() || null,
         email: form.email.trim() || null,
         password: form.password,
+        passwordUpdatedAt:
+          form.password !== initialPassword
+            ? new Date().toISOString()
+            : form.passwordUpdatedAt || new Date().toISOString(),
         pin: form.pin.trim() || null,
         url: form.url.trim() || null,
         notes: form.notes.trim() || null,
