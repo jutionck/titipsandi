@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Download, Share, Shield, X } from "lucide-react";
+import { MOBILE_ONBOARDING_STORAGE_KEY } from "@/lib/mobile-onboarding";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -38,6 +39,13 @@ export default function PwaInstallBanner() {
   }, []);
 
   useEffect(() => {
+    if (
+      window.location.pathname === "/" &&
+      localStorage.getItem(MOBILE_ONBOARDING_STORAGE_KEY) !== "completed"
+    ) {
+      return;
+    }
+
     const navigatorWithStandalone = navigator as Navigator & {
       standalone?: boolean;
     };

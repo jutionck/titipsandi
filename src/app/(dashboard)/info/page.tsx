@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import BottomNav from "@/components/BottomNav";
 import DashboardDesktopNav from "@/components/DashboardDesktopNav";
 import {
@@ -12,6 +13,7 @@ import {
   ExternalLink,
   MessageSquare,
   Mail,
+  Sparkles,
 } from "lucide-react";
 
 export default function InfoPage() {
@@ -55,6 +57,16 @@ export default function InfoPage() {
                 mempermudah keluarga terdekat (istri, anak, atau saudara) mengakses akun-akun
                 penting Anda jika terjadi situasi darurat.
               </p>
+              <Link
+                href="/?welcome=1"
+                className="mt-1 flex items-center justify-between rounded-xl border border-gray-200 bg-gray-50 p-3 text-xs font-semibold text-gray-700 transition hover:bg-gray-100 md:hidden"
+              >
+                <span className="flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-gray-500" />
+                  Lihat kembali pengenalan aplikasi
+                </span>
+                <ExternalLink className="h-3.5 w-3.5 opacity-60" />
+              </Link>
             </div>
 
             {/* Security Specs */}
