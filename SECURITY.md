@@ -33,6 +33,17 @@ Perlindungan yang dituju:
   digit diverifikasi. Challenge OTP memakai cookie HttpOnly, kode disimpan
   sebagai hash yang terikat ke challenge, berlaku lima menit, dibatasi lima
   percobaan, dan hanya dapat digunakan sekali.
+- Setiap login membuat sesi individual berumur maksimal 12 jam. Pemilik dapat
+  melihat perangkat aktif dan mencabut satu atau seluruh sesi perangkat lain.
+  Reset password mencabut seluruh sesi lama.
+- Pengguna dapat mengganti OTP email dengan TOTP RFC 6238 dari aplikasi
+  authenticator. Secret TOTP dienkripsi menggunakan application key. Sepuluh
+  recovery code dibuat secara acak, hanya ditampilkan saat dibuat, disimpan
+  sebagai blind index, dan masing-masing hanya dapat digunakan satu kali.
+- Aktivitas login, perubahan password, perubahan kontak tepercaya, dan akses
+  darurat dicatat tanpa menyimpan password, OTP, kode akses, email, atau
+  plaintext vault. Log aplikasi ini belum tahan-rusak sehingga tetap memerlukan
+  observability eksternal untuk deployment publik.
 - CSP production memakai nonce acak per-request dan tidak mengizinkan
   `unsafe-inline` maupun `unsafe-eval` untuk script.
 

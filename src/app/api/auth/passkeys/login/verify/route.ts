@@ -14,7 +14,9 @@ import {
 import { privateJson, readBoundedJson, requestClientIp } from "@/lib/api-security";
 import { prisma } from "@/lib/prisma";
 import { enforceRateLimits } from "@/lib/rate-limit";
+import { recordSecurityAuditEvent, SECURITY_AUDIT_ACTIONS } from "@/lib/security-audit";
 import { decodeTransports, getWebAuthnConfig } from "@/lib/webauthn";
+import { createUserSession } from "@/lib/user-session";
 
 export async function POST(req: NextRequest) {
   try {
@@ -66,6 +68,13 @@ export async function POST(req: NextRequest) {
       requireUserVerification: true,
     });
     if (!verification.verified) {
+      await recordSecurityAuditEvent({
+        userId: passkey.userId,
+        action: SECURITY_AUDIT_ACTIONS.LOGIN,
+        outcome: "FAILURE",
+        actorType: "OWNER",
+        metadata: { method: "passkey" },
+      });
       return privateJson({ error: "Passkey tidak dapat diverifikasi" }, { status: 401 });
     }
 
@@ -77,9 +86,18 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    const storedSession = await createUserSession(req, passkey.userId, "passkey");
     const token = await signToken({
       userId: passkey.userId,
+      sessionId: storedSession.id,
       sessionVersion: passkey.user.sessionVersion,
+    });
+    await recordSecurityAuditEvent({
+      userId: passkey.userId,
+      action: SECURITY_AUDIT_ACTIONS.LOGIN,
+      outcome: "SUCCESS",
+      actorType: "OWNER",
+      metadata: { method: "passkey" },
     });
     const response = privateJson({ success: true });
     setSessionCookie(response, token);

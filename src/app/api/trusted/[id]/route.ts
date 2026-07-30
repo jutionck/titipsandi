@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { privateJson } from "@/lib/api-security";
+import { recordSecurityAuditEvent, SECURITY_AUDIT_ACTIONS } from "@/lib/security-audit";
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getSession();
@@ -19,5 +20,12 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   }
 
   await prisma.trustedContact.delete({ where: { id } });
+  await recordSecurityAuditEvent({
+    userId: session.userId,
+    action: SECURITY_AUDIT_ACTIONS.TRUSTED_CONTACT_DELETED,
+    outcome: "SUCCESS",
+    actorType: "OWNER",
+    metadata: { contactId: id },
+  });
   return privateJson({ success: true });
 }

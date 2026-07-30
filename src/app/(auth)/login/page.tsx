@@ -17,6 +17,9 @@ export default function LoginPage() {
   const otpInputRefs = useRef<Array<HTMLInputElement | null>>([]);
   const otp = otpDigits.join("");
   const [step, setStep] = useState<"credentials" | "otp">("credentials");
+  const [otpMethod, setOtpMethod] = useState<"email" | "totp">("email");
+  const [recoveryMode, setRecoveryMode] = useState(false);
+  const [recoveryCode, setRecoveryCode] = useState("");
   const [maskedEmail, setMaskedEmail] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -49,6 +52,10 @@ export default function LoginPage() {
 
       if (data.requiresOtp) {
         setStep("otp");
+        setOtpMethod(data.otpMethod === "totp" ? "totp" : "email");
+        setRecoveryMode(false);
+        setRecoveryCode("");
+        setOtpDigits(Array(6).fill(""));
         setMaskedEmail(data.maskedEmail || "email Anda");
         setError("");
         return;
@@ -70,7 +77,7 @@ export default function LoginPage() {
       const response = await fetch("/api/auth/login/otp/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code: otp }),
+        body: JSON.stringify({ code: recoveryMode ? recoveryCode : otp }),
       });
       const result = await response.json();
       if (!response.ok) {
@@ -124,6 +131,9 @@ export default function LoginPage() {
   function changeAccount() {
     setStep("credentials");
     setOtpDigits(Array(6).fill(""));
+    setOtpMethod("email");
+    setRecoveryMode(false);
+    setRecoveryCode("");
     setMaskedEmail("");
     setError("");
   }
@@ -261,7 +271,11 @@ export default function LoginPage() {
           </h2>
           <p className="text-sm text-gray-500">
             {step === "otp"
-              ? `Masukkan kode 6 digit yang dikirim ke ${maskedEmail}`
+              ? otpMethod === "totp"
+                ? recoveryMode
+                  ? "Masukkan salah satu recovery code Anda"
+                  : "Masukkan kode 6 digit dari aplikasi authenticator"
+                : `Masukkan kode 6 digit yang dikirim ke ${maskedEmail}`
               : "Masuk untuk mengakses brankas pribadi Anda"}
           </p>
         </div>
@@ -360,41 +374,71 @@ export default function LoginPage() {
             )}
 
             <div className="space-y-1">
-              <label htmlFor="login-otp-0" className="text-xs font-semibold text-gray-600">
-                Kode OTP
+              <label
+                htmlFor={recoveryMode ? "login-recovery-code" : "login-otp-0"}
+                className="text-xs font-semibold text-gray-600"
+              >
+                {recoveryMode
+                  ? "Recovery code"
+                  : otpMethod === "totp"
+                    ? "Kode authenticator"
+                    : "Kode OTP"}
               </label>
-              <div className="grid grid-cols-6 gap-2" role="group" aria-label="Kode OTP 6 digit">
-                {otpDigits.map((digit, index) => (
-                  <input
-                    key={index}
-                    ref={(element) => {
-                      otpInputRefs.current[index] = element;
-                    }}
-                    id={`login-otp-${index}`}
-                    type="text"
-                    inputMode="numeric"
-                    autoComplete={index === 0 ? "one-time-code" : "off"}
-                    pattern="[0-9]*"
-                    maxLength={index === 0 ? 6 : 1}
-                    value={digit}
-                    onChange={(event) => updateOtpDigit(index, event.target.value)}
-                    onKeyDown={(event) => handleOtpKeyDown(index, event)}
-                    onPaste={handleOtpPaste}
-                    required
-                    autoFocus={index === 0}
-                    aria-label={`Digit OTP ${index + 1}`}
-                    className="h-14 min-w-0 w-full rounded-xl border border-gray-200 bg-white text-center font-mono text-xl font-bold text-gray-900 outline-none transition focus:border-transparent focus:ring-2 focus:ring-gray-900"
-                  />
-                ))}
-              </div>
+              {recoveryMode ? (
+                <input
+                  id="login-recovery-code"
+                  value={recoveryCode}
+                  onChange={(event) =>
+                    setRecoveryCode(event.target.value.toUpperCase().slice(0, 20))
+                  }
+                  autoComplete="one-time-code"
+                  autoCapitalize="characters"
+                  spellCheck={false}
+                  placeholder="ABCD-EFGH-IJKL"
+                  autoFocus
+                  required
+                  className="h-14 w-full rounded-xl border border-gray-200 bg-white text-center font-mono text-base font-bold uppercase tracking-wider text-gray-900 outline-none transition focus:border-transparent focus:ring-2 focus:ring-gray-900"
+                />
+              ) : (
+                <div className="grid grid-cols-6 gap-2" role="group" aria-label="Kode 6 digit">
+                  {otpDigits.map((digit, index) => (
+                    <input
+                      key={index}
+                      ref={(element) => {
+                        otpInputRefs.current[index] = element;
+                      }}
+                      id={`login-otp-${index}`}
+                      type="text"
+                      inputMode="numeric"
+                      autoComplete={index === 0 ? "one-time-code" : "off"}
+                      pattern="[0-9]*"
+                      maxLength={index === 0 ? 6 : 1}
+                      value={digit}
+                      onChange={(event) => updateOtpDigit(index, event.target.value)}
+                      onKeyDown={(event) => handleOtpKeyDown(index, event)}
+                      onPaste={handleOtpPaste}
+                      required
+                      autoFocus={index === 0}
+                      aria-label={`Digit kode ${index + 1}`}
+                      className="h-14 min-w-0 w-full rounded-xl border border-gray-200 bg-white text-center font-mono text-xl font-bold text-gray-900 outline-none transition focus:border-transparent focus:ring-2 focus:ring-gray-900"
+                    />
+                  ))}
+                </div>
+              )}
               <p className="text-xs leading-relaxed text-gray-500">
-                Kode berlaku selama 5 menit dan hanya dapat digunakan satu kali.
+                {recoveryMode
+                  ? "Setiap recovery code hanya dapat digunakan satu kali."
+                  : otpMethod === "totp"
+                    ? "Kode authenticator berubah setiap 30 detik."
+                    : "Kode email berlaku selama 5 menit dan hanya dapat digunakan satu kali."}
               </p>
             </div>
 
             <button
               type="submit"
-              disabled={loading || otp.length !== 6}
+              disabled={
+                loading || (recoveryMode ? recoveryCode.trim().length < 12 : otp.length !== 6)
+              }
               className="w-full rounded-xl bg-gray-900 py-3 text-sm font-semibold text-white shadow-md shadow-gray-900/10 transition hover:bg-gray-800 disabled:opacity-50"
             >
               {loading ? "Memverifikasi..." : "Verifikasi & masuk"}
@@ -408,14 +452,29 @@ export default function LoginPage() {
               >
                 Gunakan akun lain
               </button>
-              <button
-                type="button"
-                onClick={resendOtp}
-                disabled={resendingOtp}
-                className="font-bold text-gray-700 hover:text-gray-900 hover:underline disabled:opacity-50"
-              >
-                {resendingOtp ? "Mengirim..." : "Kirim ulang kode"}
-              </button>
+              {otpMethod === "email" ? (
+                <button
+                  type="button"
+                  onClick={resendOtp}
+                  disabled={resendingOtp}
+                  className="font-bold text-gray-700 hover:text-gray-900 hover:underline disabled:opacity-50"
+                >
+                  {resendingOtp ? "Mengirim..." : "Kirim ulang kode"}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRecoveryMode((current) => !current);
+                    setRecoveryCode("");
+                    setOtpDigits(Array(6).fill(""));
+                    setError("");
+                  }}
+                  className="font-bold text-gray-700 hover:text-gray-900 hover:underline"
+                >
+                  {recoveryMode ? "Gunakan authenticator" : "Gunakan recovery code"}
+                </button>
+              )}
             </div>
           </form>
         )}
@@ -442,7 +501,7 @@ export default function LoginPage() {
               </button>
               <p className="text-center text-[10px] leading-relaxed text-gray-400">
                 Tidak perlu mengisi email. Gunakan Face ID, sidik jari, Windows Hello, atau PIN
-                perangkat setelah diaktifkan dari halaman Informasi.
+                perangkat setelah diaktifkan dari halaman Keamanan.
               </p>
             </div>
 

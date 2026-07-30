@@ -20,6 +20,8 @@ model User {
   vaultCryptoVersion       Int?
   recoveryVaultKeyEnvelope Json?
   recoveryKeyVersion       Int?
+  totpSecret               String?
+  totpEnabledAt            DateTime?
   createdAt                DateTime  @default(now())
   updatedAt                DateTime  @updatedAt
 
@@ -29,6 +31,9 @@ model User {
   passwordResetTokens     PasswordResetToken[]
   emailVerificationTokens EmailVerificationToken[]
   loginOtpChallenges      LoginOtpChallenge[]
+  securityAuditEvents     SecurityAuditEvent[]
+  sessions                UserSession[]
+  recoveryCodes           MfaRecoveryCode[]
 }
 
 model VaultEntry {
@@ -138,7 +143,8 @@ model LoginOtpChallenge {
   id         String    @id @default(uuid())
   userId     String
   tokenHash  String    @unique
-  codeHash   String
+  codeHash   String?
+  method     String    @default("EMAIL")
   attempts   Int       @default(0)
   expiresAt  DateTime
   consumedAt DateTime?
@@ -148,4 +154,45 @@ model LoginOtpChallenge {
 
   @@index([userId])
   @@index([expiresAt])
+}
+
+model MfaRecoveryCode {
+  id        String    @id @default(uuid())
+  userId    String
+  codeHash  String    @unique
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, usedAt])
+}
+
+model SecurityAuditEvent {
+  id        String   @id @default(uuid())
+  userId    String
+  action    String
+  outcome   String
+  actorType String
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+model UserSession {
+  id          String    @id @default(uuid())
+  userId      String
+  method      String
+  deviceLabel String
+  createdAt   DateTime  @default(now())
+  lastSeenAt  DateTime  @default(now())
+  expiresAt   DateTime
+  revokedAt   DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, revokedAt, expiresAt])
 }

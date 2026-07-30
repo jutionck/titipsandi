@@ -4,9 +4,16 @@ import { prisma } from "@/lib/prisma";
 import { setLoginOtpCookie } from "@/lib/auth";
 import { privateJson, readBoundedJson, requestClientIp } from "@/lib/api-security";
 import { sendLoginOtpEmail } from "@/lib/email";
-import { createLoginOtpChallenge, maskEmail } from "@/lib/login-otp";
+import {
+  createLoginChallengeToken,
+  createLoginOtpChallenge,
+  hashLoginOtpToken,
+  LOGIN_OTP_TTL_MS,
+  maskEmail,
+} from "@/lib/login-otp";
 import { clearRateLimits, enforceRateLimits } from "@/lib/rate-limit";
 import { decryptUserEmail, emailIndexCandidates, normalizeEmail } from "@/lib/user-crypto";
+import { recordSecurityAuditEvent, SECURITY_AUDIT_ACTIONS } from "@/lib/security-audit";
 
 export async function POST(req: NextRequest) {
   try {
@@ -55,6 +62,13 @@ export async function POST(req: NextRequest) {
 
     const valid = await bcrypt.compare(authenticationSecret, user.passwordHash);
     if (!valid) {
+      await recordSecurityAuditEvent({
+        userId: user.id,
+        action: SECURITY_AUDIT_ACTIONS.LOGIN,
+        outcome: "FAILURE",
+        actorType: "OWNER",
+        metadata: { method: "password" },
+      });
       return privateJson({ error: "Email atau password salah" }, { status: 401 });
     }
     if (!user.emailVerifiedAt) {
@@ -87,14 +101,24 @@ export async function POST(req: NextRequest) {
     ]);
     if (otpRateLimitResponse) return otpRateLimitResponse;
 
-    const generated = createLoginOtpChallenge();
+    const usesTotp = Boolean(user.totpEnabledAt && user.totpSecret);
+    const generated = usesTotp
+      ? {
+          token: createLoginChallengeToken(),
+          code: null,
+          codeHash: null,
+          expiresAt: new Date(Date.now() + LOGIN_OTP_TTL_MS),
+        }
+      : createLoginOtpChallenge();
+    const generatedTokenHash = hashLoginOtpToken(generated.token);
     const challenge = await prisma.$transaction(async (tx) => {
       await tx.loginOtpChallenge.deleteMany({ where: { userId: user.id } });
       return tx.loginOtpChallenge.create({
         data: {
           userId: user.id,
-          tokenHash: generated.tokenHash,
+          tokenHash: generatedTokenHash,
           codeHash: generated.codeHash,
+          method: usesTotp ? "TOTP" : "EMAIL",
           expiresAt: generated.expiresAt,
         },
         select: { id: true },
@@ -104,21 +128,26 @@ export async function POST(req: NextRequest) {
     const recipient = decryptUserEmail(user.email, user.id);
     await clearRateLimits(rateLimitPolicies);
 
-    after(async () => {
-      try {
-        await sendLoginOtpEmail(recipient, generated.code);
-      } catch {
-        await prisma.loginOtpChallenge.deleteMany({ where: { id: challenge.id } });
-        console.error("Pengiriman OTP login gagal.");
-      }
-    });
+    if (!usesTotp && generated.code) {
+      after(async () => {
+        try {
+          await sendLoginOtpEmail(recipient, generated.code!);
+        } catch {
+          await prisma.loginOtpChallenge.deleteMany({ where: { id: challenge.id } });
+          console.error("Pengiriman OTP login gagal.");
+        }
+      });
+    }
 
     const response = privateJson(
       {
         success: true,
         requiresOtp: true,
-        maskedEmail: maskEmail(recipient),
-        message: "Kode OTP telah dikirim ke email Anda.",
+        otpMethod: usesTotp ? "totp" : "email",
+        maskedEmail: usesTotp ? null : maskEmail(recipient),
+        message: usesTotp
+          ? "Masukkan kode dari aplikasi authenticator."
+          : "Kode OTP telah dikirim ke email Anda.",
       },
       { status: 202 },
     );

@@ -1,6 +1,7 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import type { NextResponse } from "next/server";
+import { USER_SESSION_TTL_SECONDS } from "@/lib/session-policy";
 
 export const SESSION_COOKIE = "titipsandi_session";
 export const PASSKEY_CHALLENGE_COOKIE = "titipsandi_passkey_challenge";
@@ -17,7 +18,11 @@ function getJwtSecret() {
   return new TextEncoder().encode(value);
 }
 
-export async function signToken(payload: { userId: string; sessionVersion: number }) {
+export async function signToken(payload: {
+  userId: string;
+  sessionId: string;
+  sessionVersion: number;
+}) {
   return new SignJWT(payload)
     .setProtectedHeader({ alg: "HS256" })
     .setIssuer(TOKEN_ISSUER)
@@ -32,7 +37,7 @@ export function setSessionCookie(response: NextResponse, token: string) {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "strict",
-    maxAge: 60 * 60 * 12,
+    maxAge: USER_SESSION_TTL_SECONDS,
     path: "/",
   });
 }
@@ -131,14 +136,14 @@ export async function verifyToken(token: string) {
       issuer: TOKEN_ISSUER,
       audience: TOKEN_AUDIENCE,
     });
-    if (typeof payload.userId !== "string") return null;
+    if (typeof payload.userId !== "string" || typeof payload.sessionId !== "string") return null;
     const sessionVersion =
       typeof payload.sessionVersion === "number" &&
       Number.isSafeInteger(payload.sessionVersion) &&
       payload.sessionVersion >= 0
         ? payload.sessionVersion
         : 0;
-    return { userId: payload.userId, sessionVersion };
+    return { userId: payload.userId, sessionId: payload.sessionId, sessionVersion };
   } catch {
     return null;
   }
@@ -152,11 +157,31 @@ export async function getSession() {
   if (!session) return null;
 
   const { prisma } = await import("@/lib/prisma");
-  const user = await prisma.user.findUnique({
-    where: { id: session.userId },
-    select: { sessionVersion: true, emailVerifiedAt: true },
+  const storedSession = await prisma.userSession.findFirst({
+    where: {
+      id: session.sessionId,
+      userId: session.userId,
+      revokedAt: null,
+      expiresAt: { gt: new Date() },
+    },
+    select: {
+      lastSeenAt: true,
+      user: { select: { sessionVersion: true, emailVerifiedAt: true } },
+    },
   });
-  if (!user?.emailVerifiedAt || user.sessionVersion !== session.sessionVersion) return null;
+  if (
+    !storedSession?.user.emailVerifiedAt ||
+    storedSession.user.sessionVersion !== session.sessionVersion
+  ) {
+    return null;
+  }
+
+  if (storedSession.lastSeenAt.getTime() < Date.now() - 5 * 60 * 1000) {
+    await prisma.userSession.updateMany({
+      where: { id: session.sessionId, revokedAt: null },
+      data: { lastSeenAt: new Date() },
+    });
+  }
 
   return session;
 }

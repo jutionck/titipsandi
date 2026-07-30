@@ -48,6 +48,7 @@ export async function POST(req: NextRequest) {
     const now = new Date();
     if (
       !challenge ||
+      challenge.method !== "EMAIL" ||
       challenge.consumedAt ||
       challenge.expiresAt <= now ||
       challenge.attempts >= LOGIN_OTP_MAX_ATTEMPTS ||

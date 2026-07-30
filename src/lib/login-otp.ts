@@ -7,12 +7,16 @@ const CHALLENGE_PATTERN = /^[A-Za-z0-9_-]{43}$/;
 const CODE_PATTERN = /^\d{6}$/;
 
 export function createLoginOtpChallenge() {
-  const token = crypto.randomBytes(CHALLENGE_BYTES).toString("base64url");
+  const token = createLoginChallengeToken();
   return {
     token,
     tokenHash: hashLoginOtpToken(token),
     ...createLoginOtpCode(token),
   };
+}
+
+export function createLoginChallengeToken() {
+  return crypto.randomBytes(CHALLENGE_BYTES).toString("base64url");
 }
 
 export function createLoginOtpCode(token: string) {

@@ -1,0 +1,79 @@
+import { NextRequest } from "next/server";
+
+import { getSession } from "@/lib/auth";
+import { privateJson, readBoundedJson } from "@/lib/api-security";
+import { prisma } from "@/lib/prisma";
+import { recordSecurityAuditEvent, SECURITY_AUDIT_ACTIONS } from "@/lib/security-audit";
+import { clearRateLimits, enforceRateLimits } from "@/lib/rate-limit";
+import { decryptTotpSecret, verifyTotpCode } from "@/lib/totp";
+
+export async function GET() {
+  const session = await getSession();
+  if (!session) return privateJson({ error: "Unauthorized" }, { status: 401 });
+
+  const user = await prisma.user.findUnique({
+    where: { id: session.userId },
+    select: {
+      totpEnabledAt: true,
+      _count: {
+        select: {
+          recoveryCodes: { where: { usedAt: null } },
+        },
+      },
+    },
+  });
+  if (!user) return privateJson({ error: "Akun tidak ditemukan." }, { status: 404 });
+
+  return privateJson({
+    enabled: Boolean(user.totpEnabledAt),
+    enabledAt: user.totpEnabledAt,
+    remainingRecoveryCodes: user._count.recoveryCodes,
+  });
+}
+
+export async function DELETE(req: NextRequest) {
+  const session = await getSession();
+  if (!session) return privateJson({ error: "Unauthorized" }, { status: 401 });
+
+  const parsed = await readBoundedJson(req, 1024);
+  if (!parsed.ok) return parsed.response;
+  const code = parsed.value.code;
+  const policies = [
+    {
+      scope: "totp-disable-user",
+      identifier: session.userId,
+      limit: 10,
+      windowMs: 15 * 60 * 1000,
+    },
+  ];
+  const rateLimitResponse = await enforceRateLimits(policies);
+  if (rateLimitResponse) return rateLimitResponse;
+
+  const user = await prisma.user.findUnique({
+    where: { id: session.userId },
+    select: { totpSecret: true, totpEnabledAt: true },
+  });
+  if (!user?.totpSecret || !user.totpEnabledAt) {
+    return privateJson({ error: "Authenticator belum aktif." }, { status: 409 });
+  }
+  if (!verifyTotpCode(decryptTotpSecret(user.totpSecret, session.userId), code)) {
+    return privateJson({ error: "Kode authenticator tidak valid." }, { status: 400 });
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.user.update({
+      where: { id: session.userId },
+      data: { totpSecret: null, totpEnabledAt: null },
+    });
+    await tx.mfaRecoveryCode.deleteMany({ where: { userId: session.userId } });
+  });
+  await recordSecurityAuditEvent({
+    userId: session.userId,
+    action: SECURITY_AUDIT_ACTIONS.TOTP_DISABLED,
+    outcome: "SUCCESS",
+    actorType: "OWNER",
+  });
+  await clearRateLimits(policies);
+
+  return privateJson({ success: true });
+}

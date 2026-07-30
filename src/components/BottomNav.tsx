@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Shield, Grid, Plus, Users, Info } from "lucide-react";
+import { Shield, Grid, Plus, Users, ShieldCheck } from "lucide-react";
 
 export default function BottomNav() {
   const pathname = usePathname();
@@ -46,13 +46,15 @@ export default function BottomNav() {
         </Link>
 
         <Link
-          href="/info"
+          href="/security"
           className={`flex flex-col items-center gap-1 py-1 px-2.5 rounded-xl transition ${
-            pathname === "/info" ? "text-gray-900" : "text-gray-400 hover:text-gray-600"
+            pathname === "/security" || pathname === "/info"
+              ? "text-gray-900"
+              : "text-gray-400 hover:text-gray-600"
           }`}
         >
-          <Info className="w-5.5 h-5.5" />
-          <span className="text-[9px] font-bold">Info</span>
+          <ShieldCheck className="w-5.5 h-5.5" />
+          <span className="text-[9px] font-bold">Keamanan</span>
         </Link>
       </div>
     </div>

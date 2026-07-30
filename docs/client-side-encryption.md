@@ -1,11 +1,10 @@
 # Fondasi enkripsi sisi klien
 
-Status: **belum aktif untuk data produksi**.
+Status: **aktif untuk entry vault baru setelah cutover zero-knowledge**.
 
-Dokumen ini mendefinisikan transisi TitipSandi dari enkripsi sisi server menuju vault
-yang hanya dapat dibuka di perangkat pengguna. Kolom dan primitive kriptografi fase
-pertama bersifat aditif; API lama tetap menjadi jalur aktif sampai seluruh kebutuhan
-recovery dan akses darurat siap.
+TitipSandi telah beralih dari enkripsi entry sisi server menuju vault yang hanya dapat
+dibuka di perangkat pengguna. API vault hanya menerima payload terenkripsi. Recovery
+key dan akses darurat menggunakan salinan vault key yang dibungkus di browser.
 
 ## Batas kepercayaan
 
@@ -52,16 +51,14 @@ ciphertext lama.
 
 ## Tahapan rollout
 
-1. **Fondasi tidak aktif:** primitive, test vector, serta kolom database opsional.
-2. **Provisioning:** buat dan simpan protected vault key setelah autentikasi ulang.
-3. **Dual read/write terkontrol:** migrasikan entry satu per satu di browser, tandai
-   progres, dan verifikasi sebelum menghapus ciphertext lama.
-4. **Recovery:** sediakan recovery key yang dibuat di browser. Reset password tanpa
-   recovery key tidak boleh diam-diam menghancurkan akses ke vault.
-5. **Emergency access:** ganti bearer code dengan request, masa tunggu, dan salinan
-   vault key yang dibungkus menggunakan public key kontak tepercaya.
-6. **Cutover:** hentikan penerimaan plaintext oleh API, hapus dekripsi sisi server,
-   bersihkan kolom lama, lalu lakukan audit.
+1. ✅ **Fondasi:** primitive, test vector, dan kolom database.
+2. ✅ **Provisioning:** protected vault key dibuat saat registrasi.
+3. ✅ **Recovery:** recovery key dibuat di browser dan dapat membungkus ulang vault key.
+4. ✅ **Emergency access:** request, masa tunggu, persetujuan/penolakan, dan emergency
+   vault key yang dibungkus di browser.
+5. ✅ **Cutover:** API vault berhenti menerima plaintext dan kolom plaintext lama
+   dihapus.
+6. ⏳ **Assurance:** threat-model testing lanjutan dan audit keamanan independen.
 
 ## Keputusan UX yang masih harus diwujudkan
 

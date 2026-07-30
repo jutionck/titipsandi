@@ -1,9 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import BottomNav from "@/components/BottomNav";
-import LogoutButton from "@/components/LogoutButton";
-import PasskeySettings from "@/components/PasskeySettings";
+import DashboardDesktopNav from "@/components/DashboardDesktopNav";
 import {
   Info,
   ShieldCheck,
@@ -14,9 +12,6 @@ import {
   ExternalLink,
   MessageSquare,
   Mail,
-  Shield,
-  Users,
-  Plus,
 } from "lucide-react";
 
 export default function InfoPage() {
@@ -36,38 +31,7 @@ export default function InfoPage() {
             <span className="font-extrabold text-gray-900 tracking-tight">Informasi Aplikasi</span>
           </div>
 
-          {/* Desktop Nav */}
-          <div className="hidden sm:flex items-center gap-4">
-            <Link
-              href="/dashboard"
-              className="text-xs font-bold text-gray-500 hover:text-gray-900 flex items-center gap-1"
-            >
-              <Shield className="w-3.5 h-3.5" />
-              Vault
-            </Link>
-            <Link
-              href="/trusted"
-              className="text-xs font-bold text-gray-500 hover:text-gray-900 flex items-center gap-1"
-            >
-              <Users className="w-3.5 h-3.5" />
-              Kontak Darurat
-            </Link>
-            <Link
-              href="/vault/new"
-              className="text-xs font-bold text-gray-500 hover:text-gray-900 flex items-center gap-1"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              Tambah
-            </Link>
-            <Link
-              href="/info"
-              className="text-xs font-bold text-gray-900 hover:text-gray-900 flex items-center gap-1"
-            >
-              <Info className="w-3.5 h-3.5" />
-              Informasi
-            </Link>
-            <LogoutButton className="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1 cursor-pointer" />
-          </div>
+          <DashboardDesktopNav active="info" />
 
           <span className="sm:hidden text-[10px] font-bold text-gray-400 uppercase tracking-widest bg-gray-100 py-1 px-2.5 rounded-full">
             v1.0.0
@@ -125,8 +89,6 @@ export default function InfoPage() {
                 </div>
               </div>
             </div>
-
-            <PasskeySettings />
           </div>
 
           {/* Right Column: Support & Feedback */}
@@ -204,13 +166,6 @@ export default function InfoPage() {
             </div>
           </div>
         </div>
-
-        {/* Mobile-Only Logout Button */}
-        <LogoutButton
-          label="Keluar dari Akun"
-          iconClassName="w-4 h-4"
-          className="sm:hidden w-full py-3.5 bg-white border border-red-200 text-red-600 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 hover:bg-red-50 transition cursor-pointer shadow-sm"
-        />
       </main>
 
       <BottomNav />

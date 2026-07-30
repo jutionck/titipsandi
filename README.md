@@ -236,7 +236,13 @@ Kerentanan keamanan harus dilaporkan secara privat sesuai
   untuk pengiriman email masih dilindungi menggunakan key aplikasi server.
 - Recovery key harus disimpan pengguna; kehilangan master password dan recovery
   key membuat vault tidak dapat dipulihkan.
-- Belum tersedia audit log tahan-rusak atau security audit independen.
+- Riwayat aktivitas keamanan tersedia untuk pemilik akun, tetapi belum bersifat
+  tahan-rusak dan belum menggantikan log operasional eksternal. Security audit
+  independen juga belum dilakukan.
+- Sesi login dikelola per perangkat, berumur maksimal 12 jam, dan dapat dicabut
+  pemilik melalui halaman Keamanan.
+- TOTP authenticator dan recovery code sekali pakai dapat dikelola melalui
+  halaman Keamanan.
 - Rate limiter aplikasi mengurangi brute force, tetapi bukan perlindungan DDoS.
   Untuk deployment publik, tetap aktifkan WAF dan pembatasan traffic di depan
   endpoint `/api/auth/*` dan `/api/emergency`. Pastikan reverse proxy mengganti,

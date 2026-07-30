@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { enforceRateLimits } from "@/lib/rate-limit";
 import { publicContact } from "@/lib/trusted-contact-crypto";
 import { decryptUserEmail, decryptUserName } from "@/lib/user-crypto";
+import { recordSecurityAuditEvent, SECURITY_AUDIT_ACTIONS } from "@/lib/security-audit";
 
 export async function POST(req: NextRequest) {
   try {
@@ -58,6 +59,13 @@ export async function POST(req: NextRequest) {
         where: { id: contact.id },
         data: { isActivated: true, activatedAt: contact.activatedAt ?? now },
       });
+      await recordSecurityAuditEvent({
+        userId: contact.userId,
+        action: SECURITY_AUDIT_ACTIONS.EMERGENCY_ACCESS_REQUESTED,
+        outcome: "SUCCESS",
+        actorType: "TRUSTED_CONTACT",
+        metadata: { contactId: contact.id, requestId: request.id },
+      });
     }
 
     if (request.status === "REJECTED") {
@@ -94,6 +102,17 @@ export async function POST(req: NextRequest) {
         clientEncryptionVersion: true,
       },
       orderBy: { updatedAt: "desc" },
+    });
+    await recordSecurityAuditEvent({
+      userId: contact.userId,
+      action: SECURITY_AUDIT_ACTIONS.EMERGENCY_ACCESS_GRANTED,
+      outcome: "SUCCESS",
+      actorType: "TRUSTED_CONTACT",
+      metadata: {
+        contactId: contact.id,
+        requestId: request.id,
+        grantReason: request.status === "APPROVED" ? "approved" : "wait_elapsed",
+      },
     });
     const safeContact = publicContact(contact);
 

@@ -39,6 +39,13 @@ databaseTest("consumes a recovery token once and revokes existing sessions", asy
             expiresAt: generated.expiresAt,
           },
         },
+        sessions: {
+          create: {
+            method: "password_otp",
+            deviceLabel: "Integration Test · Linux",
+            expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+          },
+        },
       },
     });
 
@@ -63,6 +70,8 @@ databaseTest("consumes a recovery token once and revokes existing sessions", asy
     expect(user.sessionVersion).toBe(1);
     await expect(bcrypt.compare(authenticationSecret, user.passwordHash)).resolves.toBe(true);
     expect(user.vaultKeyEnvelope).toEqual(createdVault.protectedVaultKey);
+    const revokedSession = await prisma.userSession.findFirstOrThrow({ where: { userId: id } });
+    expect(revokedSession.revokedAt).toBeInstanceOf(Date);
   } finally {
     await prisma.user.deleteMany({ where: { id } });
     await clearRateLimits([

@@ -2,9 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import BottomNav from "@/components/BottomNav";
-import LogoutButton from "@/components/LogoutButton";
+import DashboardDesktopNav from "@/components/DashboardDesktopNav";
 import {
   Trash2,
   Copy,
@@ -15,9 +14,6 @@ import {
   Clock,
   ShieldCheck,
   Shield,
-  Users,
-  Plus,
-  Info,
   ChevronDown,
 } from "lucide-react";
 import { useVaultKey } from "@/components/VaultKeyProvider";
@@ -167,38 +163,7 @@ export default function TrustedContactsPage() {
             <span className="font-extrabold text-gray-900 tracking-tight">TitipSandi</span>
           </div>
 
-          {/* Desktop Nav */}
-          <div className="hidden sm:flex items-center gap-4">
-            <Link
-              href="/dashboard"
-              className="text-xs font-bold text-gray-500 hover:text-gray-900 flex items-center gap-1"
-            >
-              <Shield className="w-3.5 h-3.5" />
-              Vault
-            </Link>
-            <Link
-              href="/trusted"
-              className="text-xs font-bold text-gray-900 hover:text-gray-900 flex items-center gap-1"
-            >
-              <Users className="w-3.5 h-3.5" />
-              Kontak Darurat
-            </Link>
-            <Link
-              href="/vault/new"
-              className="text-xs font-bold text-gray-500 hover:text-gray-900 flex items-center gap-1"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              Tambah
-            </Link>
-            <Link
-              href="/info"
-              className="text-xs font-bold text-gray-500 hover:text-gray-900 flex items-center gap-1"
-            >
-              <Info className="w-3.5 h-3.5" />
-              Informasi
-            </Link>
-            <LogoutButton className="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1 cursor-pointer" />
-          </div>
+          <DashboardDesktopNav active="trusted" />
 
           <span className="sm:hidden text-[10px] font-bold text-gray-400 uppercase tracking-widest bg-gray-100 py-1 px-2.5 rounded-full">
             Keluarga

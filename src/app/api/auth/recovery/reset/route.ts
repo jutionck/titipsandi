@@ -12,6 +12,7 @@ import { prisma } from "@/lib/prisma";
 import { clearRateLimits, enforceRateLimits } from "@/lib/rate-limit";
 import { decryptUserEmail } from "@/lib/user-crypto";
 import { CLIENT_VAULT_CRYPTO_VERSION, validateProtectedVaultKey } from "@/lib/client-vault-crypto";
+import { recordSecurityAuditEvent, SECURITY_AUDIT_ACTIONS } from "@/lib/security-audit";
 
 const INVALID_LINK = "Tautan pemulihan tidak valid atau sudah kedaluwarsa.";
 
@@ -97,9 +98,20 @@ export async function POST(req: NextRequest) {
         where: { userId: candidate.userId, usedAt: null },
         data: { usedAt },
       });
+      await tx.userSession.updateMany({
+        where: { userId: candidate.userId, revokedAt: null },
+        data: { revokedAt: usedAt },
+      });
     });
 
     await clearRateLimits(policies);
+    await recordSecurityAuditEvent({
+      userId: candidate.userId,
+      action: SECURITY_AUDIT_ACTIONS.PASSWORD_CHANGED,
+      outcome: "SUCCESS",
+      actorType: "OWNER",
+      metadata: { sessionsRevoked: true },
+    });
     try {
       const recipient = decryptUserEmail(candidate.user.email, candidate.userId);
       const securityUrl = new URL("/forgot-password", applicationOrigin()).toString();

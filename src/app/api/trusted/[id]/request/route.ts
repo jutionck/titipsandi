@@ -3,6 +3,7 @@ import { NextRequest } from "next/server";
 import { getSession } from "@/lib/auth";
 import { privateJson, readBoundedJson } from "@/lib/api-security";
 import { prisma } from "@/lib/prisma";
+import { recordSecurityAuditEvent, SECURITY_AUDIT_ACTIONS } from "@/lib/security-audit";
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getSession();
@@ -36,6 +37,16 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (updated.count !== 1) {
     return privateJson({ error: "Tidak ada permintaan aktif." }, { status: 409 });
   }
+  await recordSecurityAuditEvent({
+    userId: session.userId,
+    action:
+      action === "approve"
+        ? SECURITY_AUDIT_ACTIONS.EMERGENCY_ACCESS_APPROVED
+        : SECURITY_AUDIT_ACTIONS.EMERGENCY_ACCESS_REJECTED,
+    outcome: "SUCCESS",
+    actorType: "OWNER",
+    metadata: { contactId: id },
+  });
 
   return privateJson({ success: true });
 }
