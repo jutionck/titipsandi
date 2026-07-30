@@ -5,6 +5,17 @@
 TitipSandi adalah password vault dan mekanisme akses darurat keluarga yang
 bersifat open source dan dapat di-self-host.
 
+## Fitur utama
+
+- Vault terenkripsi di browser menggunakan AES-256-GCM.
+- Recovery key untuk membuka kembali vault tanpa mengirim plaintext ke server.
+- Akses darurat keluarga dengan request, masa tunggu, persetujuan, dan penolakan.
+- Login Master Password dengan verifikasi kedua melalui OTP email atau TOTP.
+- Recovery codes TOTP yang hanya dapat digunakan satu kali.
+- Passkey WebAuthn dengan verifikasi pengguna.
+- Manajemen sesi per perangkat dan pencabutan sesi jarak jauh.
+- Riwayat aktivitas keamanan untuk peristiwa akun penting.
+
 > [!IMPORTANT]
 > Belum ada perangkat lunak yang dapat menjamin kerahasiaan secara absolut.
 > Isi vault dienkripsi di browser sebelum dikirim ke server. Arsitektur ini belum
@@ -29,11 +40,17 @@ bersifat open source dan dapat di-self-host.
   seluruh sesi lama melalui versi sesi per pengguna.
 - Registrasi baru tidak membuat sesi sebelum alamat email diverifikasi melalui
   token hash-only sekali pakai yang berlaku 30 menit.
-- Login dengan Master Password memerlukan OTP email enam digit yang berlaku
-  lima menit. Challenge dan kode disimpan sebagai hash terikat, dibatasi lima
-  percobaan, dan hanya dapat digunakan sekali sebelum cookie sesi diterbitkan.
+- Login dengan Master Password memerlukan verifikasi kedua sebelum sesi dibuat.
+  Akun memakai OTP email enam digit secara default; setelah TOTP diaktifkan,
+  pengguna memakai kode aplikasi authenticator atau recovery code sekali pakai.
+  Challenge dibatasi lima percobaan dan berlaku lima menit.
 - Passkey memakai WebAuthn dengan verifikasi pengguna wajib. Biometrik dan PIN
   perangkat tidak pernah dikirim ke server; database hanya menyimpan public key.
+- Setiap login membuat sesi individual dengan umur maksimal 12 jam. Pengguna
+  dapat melihat perangkat aktif serta mencabut satu atau seluruh sesi lain.
+- Login, perubahan password, perubahan kontak tepercaya, pengelolaan TOTP dan
+  sesi, serta akses darurat dicatat dalam riwayat aktivitas keamanan tanpa
+  menyimpan secret atau plaintext vault.
 - Endpoint login, registrasi, passkey, dan akses darurat memakai rate limiter
   PostgreSQL lintas-instance. Identifier bucket disimpan sebagai blind index,
   bukan email, IP, atau kode darurat mentah.
@@ -156,8 +173,8 @@ Bagian ini hanya berlaku untuk enkripsi metadata akun/kontak di server, bukan
 untuk isi vault yang dienkripsi di browser.
 
 1. Deploy migration dan kode dengan `ENCRYPTION_WRITE_VERSION=v1`.
-2. Verifikasi login Master Password beserta OTP email, passkey, dan blind index
-   email.
+2. Verifikasi login Master Password beserta OTP email/TOTP, recovery code,
+   passkey, sesi perangkat, audit log, dan blind index email.
 3. Setelah deployment stabil, ubah `ENCRYPTION_WRITE_VERSION=v2`. Record baru
    dan record yang diedit mulai memakai subkey HKDF dan format ciphertext v2.
 4. Untuk mengganti master key, pindahkan nilai lama ke
@@ -180,15 +197,37 @@ mengarah ke halaman utama Saweria.
 
 ## Login dengan passkey
 
-Setelah login memakai Master Password, buka halaman **Informasi** lalu pilih
+Setelah login memakai Master Password, buka halaman **Keamanan** lalu pilih
 **Aktifkan Face ID / Sidik Jari / PIN**. Browser dan sistem operasi akan membuat
 passkey yang terikat pada domain aplikasi. Master Password harus dikonfirmasi
-saat menambahkan passkey baru. Login berikutnya cukup memasukkan email dan
-memilih **Masuk dengan Passkey**.
+saat menambahkan passkey baru. Login berikutnya dapat langsung memilih
+**Masuk dengan Passkey** tanpa memasukkan email.
 
 Master Password tetap tersedia sebagai fallback. Hapus passkey yang tidak lagi
-digunakan dari halaman Informasi. WebAuthn memerlukan HTTPS, kecuali localhost
+digunakan dari halaman Keamanan. WebAuthn memerlukan HTTPS, kecuali localhost
 yang diizinkan untuk development.
+
+## TOTP dan recovery codes
+
+Aktifkan TOTP dari halaman **Keamanan**, pindai QR dengan aplikasi authenticator,
+lalu konfirmasi satu kode enam digit. Setelah aktif, login Master Password tidak
+lagi mengirim OTP email dan meminta kode authenticator.
+
+Saat aktivasi, TitipSandi menampilkan sepuluh recovery code. Simpan kode tersebut
+di tempat terpisah dari perangkat authenticator. Setiap kode hanya berlaku satu
+kali, tidak dapat ditampilkan kembali, dan regenerasi akan membatalkan seluruh
+kode lama. Menonaktifkan TOTP mengembalikan login ke OTP email.
+
+## Sesi perangkat dan aktivitas keamanan
+
+Halaman **Keamanan** menampilkan sesi aktif, informasi perangkat ringkas, waktu
+aktivitas, serta kontrol untuk mencabut sesi. Pencabutan berlaku pada request
+berikutnya; reset password mencabut seluruh sesi lama.
+
+Riwayat aktivitas mencatat peristiwa penting seperti login, perubahan password,
+pengelolaan TOTP, kontak tepercaya, dan akses darurat. Riwayat ini membantu
+pemilik mendeteksi aktivitas tidak dikenal, tetapi belum tahan-rusak dan bukan
+pengganti observability eksternal.
 
 ## Verifikasi email
 
@@ -220,6 +259,21 @@ npm run check
 npm run build
 ```
 
+## Release
+
+Versi aplikasi mengikuti Semantic Versioning selama masa alpha. Sebelum membuat
+tag, pastikan migration production sudah sinkron, CI berhasil, dan smoke test
+production selesai. Catatan perubahan tersedia di [CHANGELOG.md](CHANGELOG.md).
+Naskah release kandidat saat ini tersedia di
+[docs/release-v0.3.0-alpha.md](docs/release-v0.3.0-alpha.md).
+
+Contoh pembuatan tag setelah commit dokumentasi masuk ke `main`:
+
+```bash
+git tag -a v0.3.0-alpha -m "TitipSandi v0.3.0-alpha"
+git push origin v0.3.0-alpha
+```
+
 ## Kontribusi
 
 Kontribusi dipersilakan melalui issue dan pull request. Baca
@@ -243,6 +297,8 @@ Kerentanan keamanan harus dilaporkan secara privat sesuai
   pemilik melalui halaman Keamanan.
 - TOTP authenticator dan recovery code sekali pakai dapat dikelola melalui
   halaman Keamanan.
+- Export/backup vault terenkripsi dan prosedur restore yang teruji belum
+  tersedia pada release ini.
 - Rate limiter aplikasi mengurangi brute force, tetapi bukan perlindungan DDoS.
   Untuk deployment publik, tetap aktifkan WAF dan pembatasan traffic di depan
   endpoint `/api/auth/*` dan `/api/emergency`. Pastikan reverse proxy mengganti,

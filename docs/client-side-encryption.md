@@ -20,7 +20,9 @@ Target akhirnya:
 
 Password asli tidak dikirim ke server. Browser menurunkan authentication secret
 terpisah untuk login, sedangkan API vault hanya menerima ciphertext. Klaim keamanan
-tetap harus dibatasi sampai migrasi production dan audit independen selesai.
+tetap harus dibatasi sampai threat-model testing lanjutan dan audit independen
+selesai. Migrasi cutover, sesi perangkat, audit log, dan TOTP telah diterapkan di
+database production.
 
 ## Hierarki kunci versi 1
 
@@ -59,6 +61,8 @@ ciphertext lama.
 5. ✅ **Cutover:** API vault berhenti menerima plaintext dan kolom plaintext lama
    dihapus.
 6. ⏳ **Assurance:** threat-model testing lanjutan dan audit keamanan independen.
+7. ⏳ **Recovery operations:** export/backup terenkripsi, validasi file, dan
+   prosedur restore yang diuji.
 
 ## Keputusan UX yang masih harus diwujudkan
 
@@ -68,3 +72,5 @@ ciphertext lama.
   entry.
 - Reset password administratif tidak otomatis membuka vault lama.
 - Akses darurat hanya tersedia jika pemilik mengaturnya sebelum kehilangan akses.
+- Export/backup terenkripsi harus tetap mempertahankan prinsip bahwa server tidak
+  memperoleh plaintext maupun vault key.

@@ -40,10 +40,14 @@ Perlindungan yang dituju:
   authenticator. Secret TOTP dienkripsi menggunakan application key. Sepuluh
   recovery code dibuat secara acak, hanya ditampilkan saat dibuat, disimpan
   sebagai blind index, dan masing-masing hanya dapat digunakan satu kali.
+- Challenge login mengikat metode verifikasi yang dipilih. Endpoint kirim ulang
+  email menolak challenge TOTP, dan konsumsi challenge beserta pembuatan sesi
+  dilakukan dalam transaksi database.
 - Aktivitas login, perubahan password, perubahan kontak tepercaya, dan akses
-  darurat dicatat tanpa menyimpan password, OTP, kode akses, email, atau
-  plaintext vault. Log aplikasi ini belum tahan-rusak sehingga tetap memerlukan
-  observability eksternal untuk deployment publik.
+  darurat, pengelolaan TOTP, serta pencabutan sesi dicatat tanpa menyimpan
+  password, OTP, recovery code, kode akses, email, atau plaintext vault. Log
+  aplikasi ini belum tahan-rusak sehingga tetap memerlukan observability
+  eksternal untuk deployment publik.
 - CSP production memakai nonce acak per-request dan tidak mengizinkan
   `unsafe-inline` maupun `unsafe-eval` untuk script.
 
@@ -58,6 +62,9 @@ Di luar perlindungan saat ini:
   database. Rate limiter aplikasi ditujukan untuk brute force, bukan menyerap
   traffic flooding.
 - Administrator aplikasi yang sengaja memodifikasi server.
+- Kehilangan Master Password sekaligus recovery key pengguna.
+- Pemulihan melalui backup/export terenkripsi belum tersedia pada release
+  `v0.3.0-alpha`.
 
 ## Pengelolaan secret
 
@@ -78,6 +85,21 @@ Di luar perlindungan saat ini:
   key lama tetap tersedia di `ENCRYPTION_KEY_PREVIOUS` sampai re-enkripsi dan
   migrasi blind index selesai. Jangan menghapus key lama hanya karena key baru
   sudah aktif.
+
+## Checklist deployment keamanan
+
+- Terapkan seluruh Prisma migration dengan `prisma migrate deploy`; jangan
+  memakai `prisma db push` pada production.
+- Gunakan key dan database yang berbeda untuk development, preview, dan
+  production.
+- Pastikan `APP_ORIGIN`, `WEBAUTHN_ORIGIN`, dan `WEBAUTHN_RP_ID` menunjuk domain
+  canonical yang sama.
+- Verifikasi login OTP email, TOTP, recovery code sekali pakai, passkey,
+  pencabutan sesi, serta audit log setelah deployment.
+- Aktifkan WAF/rate limiting di edge dan observability yang tidak menyimpan
+  password, OTP, token, recovery code, atau plaintext vault.
+- Pertahankan `ENCRYPTION_KEY_PREVIOUS` sampai seluruh ciphertext dan blind index
+  yang masih membutuhkannya selesai dimigrasikan.
 
 ## Pelaporan kerentanan
 
