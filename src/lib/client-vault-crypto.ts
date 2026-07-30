@@ -277,6 +277,21 @@ async function importVaultKey(rawKey: Uint8Array<ArrayBuffer>) {
   ]);
 }
 
+export async function exportVaultKeyForTab(vaultKey: CryptoKey) {
+  const rawKey = new Uint8Array(await webCrypto().subtle.exportKey("raw", vaultKey));
+  assertLength(rawKey, AES_KEY_BYTES, "Kunci vault");
+  return toBase64Url(rawKey);
+}
+
+export async function importVaultKeyForTab(encodedKey: string) {
+  const rawKey = assertLength(
+    fromBase64Url(encodedKey, "Kunci vault tab"),
+    AES_KEY_BYTES,
+    "Kunci vault tab",
+  );
+  return importVaultKey(rawKey);
+}
+
 export function createEmergencyAccessCode() {
   return toBase64Url(randomBytes(AES_KEY_BYTES));
 }

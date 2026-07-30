@@ -98,13 +98,18 @@ export default function SecurityActivity() {
       )}
 
       {events.length > 0 && (
-        <div className="divide-y divide-gray-100">
+        <div
+          role="list"
+          aria-label="Daftar aktivitas keamanan"
+          tabIndex={0}
+          className="max-h-[28rem] divide-y divide-gray-100 overflow-y-auto overscroll-contain pr-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:ring-offset-2"
+        >
           {events.map((event) => {
             const succeeded = event.outcome === "SUCCESS";
             const StatusIcon = succeeded ? ShieldCheck : ShieldAlert;
 
             return (
-              <div key={event.id} className="flex gap-3 py-3 first:pt-0 last:pb-0">
+              <div key={event.id} role="listitem" className="flex gap-3 py-3 first:pt-0 last:pb-0">
                 <div
                   className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
                     succeeded ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"

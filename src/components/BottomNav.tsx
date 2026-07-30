@@ -8,7 +8,7 @@ export default function BottomNav() {
   const pathname = usePathname();
 
   return (
-    <div className="sm:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50 px-4 py-2 pb-safe shadow-lg">
+    <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 bg-white px-4 py-2 pb-safe shadow-lg lg:hidden">
       <div className="max-w-md mx-auto flex items-center justify-between">
         <Link
           href="/dashboard"

@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { startRegistration } from "@simplewebauthn/browser";
-import { Fingerprint, LoaderCircle, ShieldCheck, Trash2 } from "lucide-react";
+import { Eye, EyeOff, Fingerprint, LoaderCircle, ShieldCheck, Trash2 } from "lucide-react";
+import { deriveAuthenticationSecret } from "@/lib/client-vault-crypto";
 
 interface PasskeySummary {
   id: string;
@@ -22,25 +23,46 @@ function getDeviceName() {
 
 export default function PasskeySettings() {
   const [passkeys, setPasskeys] = useState<PasskeySummary[]>([]);
+  const [accountEmail, setAccountEmail] = useState("");
   const [loading, setLoading] = useState(true);
   const [registering, setRegistering] = useState(false);
   const [masterPassword, setMasterPassword] = useState("");
+  const [showMasterPassword, setShowMasterPassword] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
   const loadPasskeys = useCallback(async () => {
     try {
       const response = await fetch("/api/auth/passkeys");
-      if (!response.ok) return;
       const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Akses cepat belum dapat dimuat.");
+      }
+      if (typeof data.email !== "string" || !data.email) {
+        throw new Error("Identitas akun tidak valid.");
+      }
       setPasskeys(data.passkeys || []);
+      setAccountEmail(data.email);
+    } catch (caughtError) {
+      setError(
+        caughtError instanceof Error ? caughtError.message : "Akses cepat belum dapat dimuat.",
+      );
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    void loadPasskeys();
+    let active = true;
+    const load = async () => {
+      await loadPasskeys();
+    };
+    if (active) {
+      void load();
+    }
+    return () => {
+      active = false;
+    };
   }, [loadPasskeys]);
 
   async function registerPasskey() {
@@ -55,13 +77,18 @@ export default function PasskeySettings() {
       setError("Masukkan Master Password untuk mengaktifkan passkey.");
       return;
     }
+    if (!accountEmail) {
+      setError("Data akun belum selesai dimuat. Coba beberapa saat lagi.");
+      return;
+    }
 
     setRegistering(true);
     try {
+      const authenticationSecret = await deriveAuthenticationSecret(masterPassword, accountEmail);
       const optionsResponse = await fetch("/api/auth/passkeys/register/options", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ masterPassword }),
+        body: JSON.stringify({ authenticationSecret }),
       });
       const options = await optionsResponse.json();
       if (!optionsResponse.ok) throw new Error(options.error);
@@ -82,6 +109,7 @@ export default function PasskeySettings() {
 
       setMessage("Akses cepat berhasil diaktifkan pada perangkat ini.");
       setMasterPassword("");
+      setShowMasterPassword(false);
       await loadPasskeys();
     } catch (caughtError) {
       const text =
@@ -142,21 +170,34 @@ export default function PasskeySettings() {
         >
           Konfirmasi Master Password
         </label>
-        <input
-          id="passkey-master-password"
-          type="password"
-          value={masterPassword}
-          onChange={(event) => setMasterPassword(event.target.value)}
-          autoComplete="current-password"
-          placeholder="Master Password"
-          className="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-xs outline-none transition focus:border-transparent focus:ring-2 focus:ring-gray-900"
-        />
+        <div className="relative">
+          <input
+            id="passkey-master-password"
+            type={showMasterPassword ? "text" : "password"}
+            value={masterPassword}
+            onChange={(event) => setMasterPassword(event.target.value)}
+            autoComplete="current-password"
+            placeholder="Masukkan Master Password"
+            className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-3.5 pr-10 text-xs outline-none transition focus:border-transparent focus:ring-2 focus:ring-gray-900"
+          />
+          <button
+            type="button"
+            onClick={() => setShowMasterPassword((current) => !current)}
+            aria-label={
+              showMasterPassword ? "Sembunyikan Master Password" : "Tampilkan Master Password"
+            }
+            aria-pressed={showMasterPassword}
+            className="absolute inset-y-0 right-0 flex cursor-pointer items-center pr-3 text-gray-400 transition hover:text-gray-700"
+          >
+            {showMasterPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          </button>
+        </div>
       </div>
 
       <button
         type="button"
         onClick={registerPasskey}
-        disabled={registering}
+        disabled={registering || loading || !accountEmail}
         className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-gray-900 py-3 text-xs font-bold text-white transition hover:bg-gray-800 disabled:cursor-wait disabled:opacity-60"
       >
         {registering ? (

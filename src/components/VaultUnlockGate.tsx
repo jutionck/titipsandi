@@ -14,16 +14,21 @@ type KeyState = {
 
 export default function VaultUnlockGate({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const { vaultKey, setVaultKey, recoveryKeyToSave, acknowledgeRecoveryKey } = useVaultKey();
+  const { vaultKey, setVaultKey, recoveryKeyToSave, restoringVaultKey, acknowledgeRecoveryKey } =
+    useVaultKey();
   const [recoveryCopied, setRecoveryCopied] = useState(false);
   const [keyState, setKeyState] = useState<KeyState | null>(null);
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(!vaultKey);
+  const [rememberForTab, setRememberForTab] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [unlocking, setUnlocking] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
+    if (restoringVaultKey) {
+      return;
+    }
     if (vaultKey) {
       return;
     }
@@ -31,6 +36,7 @@ export default function VaultUnlockGate({ children }: { children: React.ReactNod
     const controller = new AbortController();
 
     async function loadProtectedKey() {
+      setLoading(true);
       try {
         const response = await fetch("/api/vault/key", {
           cache: "no-store",
@@ -66,7 +72,7 @@ export default function VaultUnlockGate({ children }: { children: React.ReactNod
 
     void loadProtectedKey();
     return () => controller.abort();
-  }, [router, vaultKey]);
+  }, [restoringVaultKey, router, vaultKey]);
 
   async function handleUnlock(event: React.FormEvent) {
     event.preventDefault();
@@ -77,7 +83,7 @@ export default function VaultUnlockGate({ children }: { children: React.ReactNod
     try {
       if (keyState.protectedVaultKey) {
         const key = await unlockVaultKey(password, keyState.userId, keyState.protectedVaultKey);
-        setVaultKey(key, keyState.userId);
+        await setVaultKey(key, keyState.userId, { rememberForTab });
       } else {
         throw new Error("Akun tidak memiliki kunci vault.");
       }
@@ -191,6 +197,24 @@ export default function VaultUnlockGate({ children }: { children: React.ReactNod
                 </button>
               </div>
             </div>
+
+            <label className="flex cursor-pointer items-start gap-2.5 rounded-xl bg-gray-100 p-3">
+              <input
+                type="checkbox"
+                checked={rememberForTab}
+                onChange={(event) => setRememberForTab(event.target.checked)}
+                className="mt-0.5 h-4 w-4 accent-gray-900"
+              />
+              <span>
+                <span className="block text-xs font-semibold text-gray-700">
+                  Ingat vault sampai tab ditutup
+                </span>
+                <span className="mt-0.5 block text-[10px] leading-relaxed text-gray-500">
+                  Refresh tidak akan meminta password lagi. Menutup tab atau logout tetap mengunci
+                  vault.
+                </span>
+              </span>
+            </label>
 
             <button
               type="submit"

@@ -36,6 +36,10 @@ Perlindungan yang dituju:
 - Setiap login membuat sesi individual berumur maksimal 12 jam. Pemilik dapat
   melihat perangkat aktif dan mencabut satu atau seluruh sesi perangkat lain.
   Reset password mencabut seluruh sesi lama.
+- Opsi “ingat sampai tab ditutup” menyimpan vault key pada `sessionStorage`.
+  Saat refresh, aplikasi hanya memulihkannya setelah user ID pada sesi server
+  cocok. Logout, sesi yang tidak valid, data storage rusak, dan penutupan tab
+  menghapus atau mengakhiri akses terhadap salinan tersebut.
 - Pengguna dapat mengganti OTP email dengan TOTP RFC 6238 dari aplikasi
   authenticator. Secret TOTP dienkripsi menggunakan application key. Sepuluh
   recovery code dibuat secara acak, hanya ditampilkan saat dibuat, disimpan
@@ -55,6 +59,8 @@ Di luar perlindungan saat ini:
 
 - Kompromi runtime Vercel atau `ENCRYPTION_KEY`.
 - JavaScript berbahaya yang disajikan dari origin aplikasi.
+- `sessionStorage` dapat dibaca JavaScript pada origin yang sama. Mengaktifkan
+  opsi ingat-tab memperpanjang jendela risiko XSS sampai tab ditutup.
 - Perangkat pengguna, browser extension, clipboard, screenshot, dan phishing.
 - Pengambilalihan mailbox pengguna yang dapat menerima OTP login dan tautan
   pemulihan.

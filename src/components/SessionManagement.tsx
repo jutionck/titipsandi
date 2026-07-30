@@ -104,13 +104,19 @@ export default function SessionManagement() {
       )}
       {loading && <p className="text-xs text-gray-400">Memuat sesi...</p>}
 
-      {!loading && (
-        <div className="space-y-2">
+      {!loading && sessions.length > 0 && (
+        <div
+          role="list"
+          aria-label="Daftar perangkat dan sesi aktif"
+          tabIndex={0}
+          className="max-h-[28rem] space-y-2 overflow-y-auto overscroll-contain pr-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:ring-offset-2"
+        >
           {sessions.map((session) => {
             const current = session.id === currentSessionId;
             return (
               <div
                 key={session.id}
+                role="listitem"
                 className="flex items-start justify-between gap-3 rounded-xl border border-gray-100 bg-gray-50 p-3"
               >
                 <div className="min-w-0">
@@ -156,13 +162,13 @@ export default function SessionManagement() {
               </div>
             );
           })}
-
-          {sessions.length === 0 && (
-            <p className="rounded-xl bg-gray-50 p-3 text-xs text-gray-500">
-              Tidak ada sesi aktif yang dapat ditampilkan.
-            </p>
-          )}
         </div>
+      )}
+
+      {!loading && sessions.length === 0 && (
+        <p className="rounded-xl bg-gray-50 p-3 text-xs text-gray-500">
+          Tidak ada sesi aktif yang dapat ditampilkan.
+        </p>
       )}
 
       {otherSessions.length > 0 && (

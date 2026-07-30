@@ -267,9 +267,9 @@ function DashboardPageContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col pb-24 sm:pb-6">
+    <div className="min-h-screen bg-gray-50 flex flex-col pb-24 lg:pb-6">
       <header className="bg-white border-b border-gray-200 sticky top-0 z-20 shadow-sm">
-        <div className="max-w-6xl mx-auto px-4 py-3.5 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 py-3.5 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-gray-900 text-white rounded-lg flex items-center justify-center">
               <Shield className="w-4.5 h-4.5" />
@@ -279,13 +279,13 @@ function DashboardPageContent() {
 
           <DashboardDesktopNav active="vault" />
 
-          <span className="sm:hidden text-[10px] font-bold text-gray-400 uppercase tracking-widest bg-gray-100 py-1 px-2.5 rounded-full">
+          <span className="lg:hidden text-[10px] font-bold text-gray-400 uppercase tracking-widest bg-gray-100 py-1 px-2.5 rounded-full">
             Kunci Aktif
           </span>
         </div>
       </header>
 
-      <main className="flex-1 max-w-6xl w-full mx-auto px-4 py-6 space-y-6">
+      <main className="mx-auto w-full max-w-7xl flex-1 space-y-4 px-4 py-5 sm:space-y-6 sm:py-6">
         <div>
           <h2 className="text-xl font-extrabold text-gray-900 tracking-tight">Brankas Anda</h2>
           <p className="text-xs text-gray-400 font-semibold uppercase tracking-wider mt-0.5">
@@ -309,7 +309,7 @@ function DashboardPageContent() {
 
         {/* Mobile View: Active Category Indicator (Clean PWA style) */}
         {activeCategory && (
-          <div className="sm:hidden flex items-center justify-between bg-white border border-gray-200 rounded-xl px-4 py-2.5 shadow-xs">
+          <div className="lg:hidden flex items-center justify-between bg-white border border-gray-200 rounded-xl px-4 py-2.5 shadow-xs">
             <div className="flex items-center gap-2">
               <span className="text-xs font-semibold text-gray-500">Filter aktif:</span>
               <span className="text-xs font-bold text-gray-900 bg-gray-100 py-1 px-2.5 rounded-lg">
@@ -326,7 +326,7 @@ function DashboardPageContent() {
         )}
 
         {/* Desktop View: Horizontal Scroll List (Hidden on Mobile) */}
-        <div className="hidden sm:flex gap-2 overflow-x-auto pb-2 scrollbar-none snap-x -mx-4 px-4 sm:mx-0 sm:px-0">
+        <div className="hidden flex-wrap gap-2 lg:flex">
           <button
             onClick={() => setActiveCategory("")}
             className={`px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition cursor-pointer snap-start ${
@@ -368,7 +368,7 @@ function DashboardPageContent() {
           <div className="text-center py-12 text-sm text-gray-400 font-medium">Memuat data...</div>
         ) : entries.length === 0 ? (
           <div className="bg-white border border-gray-200 rounded-2xl p-12 text-center space-y-3 shadow-sm">
-            <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto text-gray-450">
+            <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto text-gray-400">
               <LockKeyhole className="w-6 h-6" />
             </div>
             <div className="space-y-1">
@@ -385,36 +385,36 @@ function DashboardPageContent() {
             </Link>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2 2xl:grid-cols-3">
             {entries.map((entry) => (
               <div
                 key={entry.id}
-                className="bg-white border border-gray-250/70 rounded-2xl p-4 shadow-sm hover:border-gray-300 transition space-y-4"
+                className="min-w-0 overflow-hidden space-y-3 rounded-2xl border border-gray-200 bg-white p-3 shadow-sm transition hover:border-gray-300 sm:p-3.5"
               >
                 <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center border border-gray-100">
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-gray-100 bg-gray-50 sm:h-9 sm:w-9 sm:rounded-xl">
                       {renderCategoryIcon(entry.category)}
                     </div>
                     <div className="min-w-0">
                       <h3 className="text-sm font-bold text-gray-900 truncate">{entry.title}</h3>
-                      <p className="text-[10px] font-semibold text-gray-450 uppercase tracking-wider">
+                      <p className="text-[9px] font-semibold uppercase tracking-wider text-gray-400 sm:text-[10px]">
                         {CATEGORIES.find((c) => c.value === entry.category)?.label ||
                           entry.category}
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-1">
+                  <div className="flex shrink-0 items-center gap-1">
                     <Link
                       href={`/vault/${entry.id}/edit`}
-                      className="p-2 text-gray-400 hover:text-gray-700 rounded-lg hover:bg-gray-50 transition"
+                      className="rounded-lg p-1.5 text-gray-400 transition hover:bg-gray-50 hover:text-gray-700"
                       title="Edit"
                     >
                       <Edit3 className="w-4 h-4" />
                     </Link>
                     <button
                       onClick={() => requestDelete(entry)}
-                      className="p-2 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-55/40 transition"
+                      className="rounded-lg p-1.5 text-gray-400 transition hover:bg-red-50 hover:text-red-600"
                       title="Hapus"
                       aria-label={`Hapus ${entry.title}`}
                     >
@@ -423,17 +423,20 @@ function DashboardPageContent() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t border-gray-100 text-xs">
+                <div className="grid grid-cols-2 gap-2 border-t border-gray-100 pt-2 text-xs">
                   {entry.username && (
-                    <div className="flex items-center justify-between sm:justify-start gap-4 p-2 bg-gray-50/60 rounded-xl">
-                      <span className="text-gray-450 font-medium">Username</span>
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <span className="text-gray-900 font-semibold truncate">
+                    <div className="min-w-0 rounded-xl bg-gray-50/80 px-2 py-1.5 sm:px-2.5 sm:py-2">
+                      <span className="block text-[9px] font-bold uppercase tracking-wider text-gray-400">
+                        Username
+                      </span>
+                      <div className="mt-0.5 flex min-w-0 items-center gap-1">
+                        <span className="min-w-0 flex-1 truncate font-semibold text-gray-900">
                           {entry.username}
                         </span>
                         <button
                           onClick={() => copyToClipboard(entry.username!, `un-${entry.id}`)}
-                          className="p-1 text-gray-400 hover:text-gray-600"
+                          className="shrink-0 p-1 text-gray-400 hover:text-gray-600"
+                          aria-label={`Salin username ${entry.title}`}
                         >
                           {copiedId === `un-${entry.id}` ? (
                             <Check className="w-3.5 h-3.5 text-green-600" />
@@ -446,13 +449,18 @@ function DashboardPageContent() {
                   )}
 
                   {entry.email && (
-                    <div className="flex items-center justify-between sm:justify-start gap-4 p-2 bg-gray-50/60 rounded-xl">
-                      <span className="text-gray-455 font-medium">Email</span>
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <span className="text-gray-900 font-semibold truncate">{entry.email}</span>
+                    <div className="min-w-0 rounded-xl bg-gray-50/80 px-2 py-1.5 sm:px-2.5 sm:py-2">
+                      <span className="block text-[9px] font-bold uppercase tracking-wider text-gray-400">
+                        Email
+                      </span>
+                      <div className="mt-0.5 flex min-w-0 items-center gap-1">
+                        <span className="min-w-0 flex-1 truncate font-semibold text-gray-900">
+                          {entry.email}
+                        </span>
                         <button
                           onClick={() => copyToClipboard(entry.email!, `em-${entry.id}`)}
-                          className="p-1 text-gray-400 hover:text-gray-600"
+                          className="shrink-0 p-1 text-gray-400 hover:text-gray-600"
+                          aria-label={`Salin email ${entry.title}`}
                         >
                           {copiedId === `em-${entry.id}` ? (
                             <Check className="w-3.5 h-3.5 text-green-600" />
@@ -464,19 +472,22 @@ function DashboardPageContent() {
                     </div>
                   )}
 
-                  <div className="flex items-center justify-between sm:justify-start gap-4 p-2 bg-gray-50/60 rounded-xl">
-                    <span className="text-gray-450 font-medium">Password</span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-gray-900 font-mono font-bold tracking-wider">
+                  <div className="min-w-0 rounded-xl bg-gray-50/80 px-2 py-1.5 sm:px-2.5 sm:py-2">
+                    <span className="block text-[9px] font-bold uppercase tracking-wider text-gray-400">
+                      Password
+                    </span>
+                    <div className="mt-0.5 flex min-w-0 items-center gap-1">
+                      <span className="min-w-0 flex-1 truncate font-mono font-bold tracking-wider text-gray-900">
                         {visiblePasswords.has(entry.id)
                           ? secretEntries[entry.id]?.password
                           : "••••••••"}
                       </span>
-                      <div className="flex items-center gap-0.5">
+                      <div className="flex shrink-0 items-center">
                         <button
                           onClick={() => togglePassword(entry.id, entry.id)}
                           disabled={loadingSecrets.has(entry.id)}
                           className="p-1 text-gray-400 hover:text-gray-600"
+                          aria-label={`${visiblePasswords.has(entry.id) ? "Sembunyikan" : "Tampilkan"} password ${entry.title}`}
                         >
                           {visiblePasswords.has(entry.id) ? (
                             <EyeOff className="w-3.5 h-3.5" />
@@ -488,6 +499,7 @@ function DashboardPageContent() {
                           onClick={() => copySecret(entry.id, "password", `pw-${entry.id}`)}
                           disabled={loadingSecrets.has(entry.id)}
                           className="p-1 text-gray-400 hover:text-gray-600"
+                          aria-label={`Salin password ${entry.title}`}
                         >
                           {copiedId === `pw-${entry.id}` ? (
                             <Check className="w-3.5 h-3.5 text-green-600" />
@@ -500,18 +512,21 @@ function DashboardPageContent() {
                   </div>
 
                   {entry.hasPin && secretEntries[entry.id]?.pin && (
-                    <div className="flex items-center justify-between sm:justify-start gap-4 p-2 bg-gray-50/60 rounded-xl">
-                      <span className="text-gray-450 font-medium">PIN</span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-gray-900 font-mono font-bold tracking-wider">
+                    <div className="min-w-0 rounded-xl bg-gray-50/80 px-2 py-1.5 sm:px-2.5 sm:py-2">
+                      <span className="block text-[9px] font-bold uppercase tracking-wider text-gray-400">
+                        PIN
+                      </span>
+                      <div className="mt-0.5 flex min-w-0 items-center gap-1">
+                        <span className="min-w-0 flex-1 truncate font-mono font-bold tracking-wider text-gray-900">
                           {visiblePasswords.has(`pin-${entry.id}`)
                             ? secretEntries[entry.id]?.pin
                             : "••••"}
                         </span>
-                        <div className="flex items-center gap-0.5">
+                        <div className="flex shrink-0 items-center">
                           <button
                             onClick={() => togglePassword(`pin-${entry.id}`, entry.id)}
                             className="p-1 text-gray-400 hover:text-gray-600"
+                            aria-label={`${visiblePasswords.has(`pin-${entry.id}`) ? "Sembunyikan" : "Tampilkan"} PIN ${entry.title}`}
                           >
                             {visiblePasswords.has(`pin-${entry.id}`) ? (
                               <EyeOff className="w-3.5 h-3.5" />
@@ -522,6 +537,7 @@ function DashboardPageContent() {
                           <button
                             onClick={() => copySecret(entry.id, "pin", `pin-${entry.id}`)}
                             className="p-1 text-gray-400 hover:text-gray-600"
+                            aria-label={`Salin PIN ${entry.title}`}
                           >
                             {copiedId === `pin-${entry.id}` ? (
                               <Check className="w-3.5 h-3.5 text-green-600" />
@@ -648,7 +664,7 @@ function DashboardPageContent() {
 
       {/* Mobile Bottom Sheet for Categories */}
       {showCategoriesSheet && (
-        <div className="sm:hidden fixed inset-0 z-50 flex items-end justify-center">
+        <div className="lg:hidden fixed inset-0 z-50 flex items-end justify-center">
           {/* Backdrop */}
           <div
             onClick={() => router.push("/dashboard")}
@@ -658,7 +674,7 @@ function DashboardPageContent() {
           {/* Bottom Sheet Container */}
           <div className="relative w-full bg-white rounded-t-3xl shadow-xl z-10 max-h-[85vh] flex flex-col pb-safe animate-in slide-in-from-bottom duration-250">
             {/* Header Drag Handle Indicator */}
-            <div className="w-12 h-1.5 bg-gray-250 rounded-full mx-auto my-3" />
+            <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto my-3" />
 
             <div className="flex items-center justify-between px-6 pb-3 border-b border-gray-100">
               <span className="text-sm font-bold text-gray-900">Pilih Kategori</span>

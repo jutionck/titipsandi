@@ -28,6 +28,7 @@ export default function LoginPage() {
   const [resendingVerification, setResendingVerification] = useState(false);
   const [canResendVerification, setCanResendVerification] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberVaultForTab, setRememberVaultForTab] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -92,7 +93,9 @@ export default function LoginPage() {
 
       if (result.protectedVaultKey) {
         const unlockedKey = await unlockVaultKey(password, result.userId, result.protectedVaultKey);
-        setVaultKey(unlockedKey, result.userId);
+        await setVaultKey(unlockedKey, result.userId, {
+          rememberForTab: rememberVaultForTab,
+        });
       } else {
         setError("Akun legacy tidak memiliki kunci vault dan tidak dapat digunakan pada cutover.");
         return;
@@ -350,6 +353,23 @@ export default function LoginPage() {
                 </button>
               </div>
             </div>
+
+            <label className="flex cursor-pointer items-start gap-2.5 rounded-xl bg-gray-100 p-3">
+              <input
+                type="checkbox"
+                checked={rememberVaultForTab}
+                onChange={(event) => setRememberVaultForTab(event.target.checked)}
+                className="mt-0.5 h-4 w-4 accent-gray-900"
+              />
+              <span>
+                <span className="block text-xs font-semibold text-gray-700">
+                  Ingat vault sampai tab ditutup
+                </span>
+                <span className="mt-0.5 block text-[10px] leading-relaxed text-gray-500">
+                  Refresh tidak akan meminta Master Password lagi pada tab ini.
+                </span>
+              </span>
+            </label>
 
             <button
               type="submit"

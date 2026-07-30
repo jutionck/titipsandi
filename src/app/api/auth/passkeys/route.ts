@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { getSession } from "@/lib/auth";
 import { privateJson, readBoundedJson, safeText } from "@/lib/api-security";
 import { prisma } from "@/lib/prisma";
+import { decryptUserEmail } from "@/lib/user-crypto";
 
 export async function GET() {
   const session = await getSession();
@@ -9,19 +10,30 @@ export async function GET() {
     return privateJson({ error: "Tidak terautentikasi" }, { status: 401 });
   }
 
-  const passkeys = await prisma.passkey.findMany({
-    where: { userId: session.userId },
-    orderBy: { createdAt: "desc" },
+  const user = await prisma.user.findUnique({
+    where: { id: session.userId },
     select: {
-      id: true,
-      name: true,
-      createdAt: true,
-      lastUsedAt: true,
-      backedUp: true,
+      email: true,
+      passkeys: {
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          name: true,
+          createdAt: true,
+          lastUsedAt: true,
+          backedUp: true,
+        },
+      },
     },
   });
+  if (!user) {
+    return privateJson({ error: "Pengguna tidak ditemukan" }, { status: 404 });
+  }
 
-  return privateJson({ passkeys });
+  return privateJson({
+    email: decryptUserEmail(user.email, session.userId),
+    passkeys: user.passkeys,
+  });
 }
 
 export async function DELETE(req: NextRequest) {

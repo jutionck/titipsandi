@@ -48,6 +48,10 @@ bersifat open source dan dapat di-self-host.
   perangkat tidak pernah dikirim ke server; database hanya menyimpan public key.
 - Setiap login membuat sesi individual dengan umur maksimal 12 jam. Pengguna
   dapat melihat perangkat aktif serta mencabut satu atau seluruh sesi lain.
+- Secara opsional, pengguna dapat mengingat vault sampai tab ditutup. Vault key
+  disimpan pada `sessionStorage`, divalidasi terhadap user sesi saat refresh,
+  dan dihapus ketika logout atau tab ditutup. Opsi ini tidak memakai
+  `localStorage` dan tidak bertahan antar-sesi browser.
 - Login, perubahan password, perubahan kontak tepercaya, pengelolaan TOTP dan
   sesi, serta akses darurat dicatat dalam riwayat aktivitas keamanan tanpa
   menyimpan secret atau plaintext vault.
@@ -297,6 +301,8 @@ Kerentanan keamanan harus dilaporkan secara privat sesuai
   pemilik melalui halaman Keamanan.
 - TOTP authenticator dan recovery code sekali pakai dapat dikelola melalui
   halaman Keamanan.
+- Opsi mengingat vault dalam satu tab memperpanjang waktu vault key tersedia
+  bagi JavaScript pada origin aplikasi. Jangan aktifkan pada perangkat bersama.
 - Export/backup vault terenkripsi dan prosedur restore yang teruji belum
   tersedia pada release ini.
 - Rate limiter aplikasi mengurangi brute force, tetapi bukan perlindungan DDoS.

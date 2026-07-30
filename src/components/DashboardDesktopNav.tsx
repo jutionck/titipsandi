@@ -14,7 +14,7 @@ export default function DashboardDesktopNav({ active }: { active: DashboardSecti
     }`;
 
   return (
-    <nav className="hidden items-center gap-4 sm:flex" aria-label="Navigasi utama">
+    <nav className="hidden items-center gap-4 lg:flex" aria-label="Navigasi utama">
       <Link href="/dashboard" className={linkClass("vault")}>
         <Shield className="h-3.5 w-3.5" />
         Vault

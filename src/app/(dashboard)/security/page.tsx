@@ -13,7 +13,7 @@ import TotpSettings from "@/components/TotpSettings";
 
 export default function SecurityPage() {
   return (
-    <div className="flex min-h-screen flex-col bg-gray-50 pb-24 sm:pb-6">
+    <div className="flex min-h-screen flex-col bg-gray-50 pb-24 lg:pb-6">
       <header className="sticky top-0 z-20 border-b border-gray-200 bg-white shadow-sm">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3.5">
           <div className="flex items-center gap-2">
@@ -74,7 +74,7 @@ export default function SecurityPage() {
         <LogoutButton
           label="Keluar dari Akun"
           iconClassName="h-4 w-4"
-          className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-2xl border border-red-200 bg-white py-3.5 text-xs font-bold text-red-600 shadow-sm transition hover:bg-red-50 sm:hidden"
+          className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-2xl border border-red-200 bg-white py-3.5 text-xs font-bold text-red-600 shadow-sm transition hover:bg-red-50 lg:hidden"
         />
       </main>
 

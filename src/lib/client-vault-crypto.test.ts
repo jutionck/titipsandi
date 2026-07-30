@@ -7,6 +7,8 @@ import {
   decryptClientVaultPayload,
   deriveAuthenticationSecret,
   encryptClientVaultPayload,
+  exportVaultKeyForTab,
+  importVaultKeyForTab,
   recoverAndRewrapVaultKey,
   hashEmergencyAccessCode,
   unlockEmergencyVaultKey,
@@ -131,6 +133,19 @@ describe("client vault crypto", () => {
     expect(first.protectedVaultKey.iv).not.toBe(second.protectedVaultKey.iv);
     expect(firstEntry.iv).not.toBe(secondEntry.iv);
     expect(firstEntry.ciphertext).not.toBe(secondEntry.ciphertext);
+  });
+
+  it("memulihkan vault key untuk sesi tab tanpa mengubah isi vault", async () => {
+    const created = await createProtectedVaultKey(password, userId);
+    const encrypted = await encryptClientVaultPayload(created.vaultKey, userId, entryId, payload);
+    const encodedKey = await exportVaultKeyForTab(created.vaultKey);
+    const restoredKey = await importVaultKeyForTab(encodedKey);
+
+    expect(encodedKey).toMatch(/^[A-Za-z0-9_-]{43}$/u);
+    await expect(
+      decryptClientVaultPayload(restoredKey, userId, entryId, encrypted),
+    ).resolves.toEqual(payload);
+    await expect(importVaultKeyForTab("kunci-rusak")).rejects.toThrow();
   });
 
   it("menurunkan authentication secret deterministik tanpa memakai password mentah", async () => {

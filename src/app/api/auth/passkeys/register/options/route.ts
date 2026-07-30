@@ -1,8 +1,8 @@
 import { NextRequest } from "next/server";
 import { generateRegistrationOptions } from "@simplewebauthn/server";
-import bcrypt from "bcryptjs";
 import { getSession, setPasskeyChallengeCookie, signPasskeyChallenge } from "@/lib/auth";
 import { privateJson, readBoundedJson, requestClientIp } from "@/lib/api-security";
+import { verifyAuthenticationSecret } from "@/lib/authentication-secret";
 import { prisma } from "@/lib/prisma";
 import { enforceRateLimits } from "@/lib/rate-limit";
 import { decryptUserEmail, decryptUserName } from "@/lib/user-crypto";
@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
   ]);
   if (rateLimitResponse) return rateLimitResponse;
 
-  const masterPassword = parsed.value.masterPassword;
+  const authenticationSecret = parsed.value.authenticationSecret;
   const user = await prisma.user.findUnique({
     where: { id: session.userId },
     include: { passkeys: true },
@@ -40,11 +40,7 @@ export async function POST(req: NextRequest) {
   if (!user) {
     return privateJson({ error: "Pengguna tidak ditemukan" }, { status: 404 });
   }
-  if (
-    typeof masterPassword !== "string" ||
-    Buffer.byteLength(masterPassword, "utf8") > 72 ||
-    !(await bcrypt.compare(masterPassword, user.passwordHash))
-  ) {
+  if (!(await verifyAuthenticationSecret(authenticationSecret, user.passwordHash))) {
     return privateJson({ error: "Master Password tidak valid" }, { status: 401 });
   }
 
