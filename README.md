@@ -70,7 +70,9 @@ bersifat open source dan dapat di-self-host.
 - API dan halaman privat menggunakan `Cache-Control: no-store`; service worker
   tidak menyimpan halaman atau respons vault.
 - Supabase dipakai hanya sebagai PostgreSQL terkelola. Aplikasi tidak
-  membutuhkan Supabase anon key atau service-role key.
+  membutuhkan Supabase anon key atau service-role key. Seluruh tabel aplikasi
+  di schema `public` memakai RLS tanpa policy bagi role API Supabase; akses data
+  hanya dilakukan server melalui Prisma.
 
 Metadata berikut masih terlihat oleh administrator database: ID internal,
 kategori vault, waktu pembuatan/perubahan, relasi antar-record, status aktivasi

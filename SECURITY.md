@@ -102,6 +102,9 @@ Di luar perlindungan saat ini:
 
 - Terapkan seluruh Prisma migration dengan `prisma migrate deploy`; jangan
   memakai `prisma db push` pada production.
+- Pertahankan RLS pada setiap tabel di schema `public` tanpa policy untuk role
+  Supabase `anon` atau `authenticated`. TitipSandi mengakses database hanya dari
+  server melalui Prisma; penambahan tabel baru harus disertai aktivasi RLS.
 - Gunakan key dan database yang berbeda untuk development, preview, dan
   production.
 - Pastikan `APP_ORIGIN`, `WEBAUTHN_ORIGIN`, dan `WEBAUTHN_RP_ID` menunjuk domain
